@@ -1,0 +1,52 @@
+# Review
+
+Current scaffold review, risks, and next concepts to implement.
+
+## Current assessment
+
+The repo has the right shape for a Pi extension package, but the implementation is still a scaffold. The useful decisions are captured; the bridge and local site lifecycle are not built yet.
+
+## Good decisions
+
+These choices should survive the next implementation pass.
+
+- New package instead of stuffing this into a product repo.
+- Pi extension first, because review feedback must route into the spawned Pi session.
+- SvelteKit/mdsvex is a good fit for readable local documents.
+- XState is warranted: serving, watching, bridge sends, retries, cancellation, and reloads are lifecycle-heavy.
+- Effect services are warranted for process/filesystem/portless/session boundaries.
+- Keystrok as inspiration fits the keyboard-first review surface.
+- AI Hero `tools/sequence-review-app` proves the first useful loop: document load, SSE file watch, selected block feedback, batch send, and waiting for Pi/file update. See [[sequence-review]].
+- pi-feedback proves the same operator pattern from another angle: external readable review surface, user annotations, diff/feedback returned into Pi.
+
+## Risks
+
+These are the main ways the project could drift or become fucky.
+
+- A generic static site generator is a trap. The differentiator is the Pi Bridge.
+- Browser-to-Pi routing needs session identity, duplicate-send protection, and lifecycle cleanup, not just a `/batch` endpoint.
+- Long-running local servers need explicit shutdown on `session_shutdown`.
+- `repos/` can wreck tool performance if not excluded aggressively.
+- Copying keystrok behavior without preserving MIT license would be sloppy and unnecessary.
+- Letting support-specific pages define the substrate would trap pi-notes inside AI Hero. The adapter boundary needs to stay real.
+
+## Next implementation concepts
+
+These concepts should become types, services, machines, or docs as the build proceeds.
+
+1. `ReferenceSnapshot` — metadata for each shallow source subtree: url, commit, refreshedAt, license.
+2. `ProductRegistry` — maps namespace slug to notes root, route, portless alias, and active site actor.
+3. `SiteActor` — starts/stops SvelteKit preview/dev server and owns portless registration.
+4. `BridgeSession` — binds browser review documents to the spawning Pi session file.
+5. `BridgeInboxWatcher` — extension-owned prototype actor that polls saved Review Batches, sends one at a time, and records processed markers.
+6. `ReviewBatch` — typed payload for selected blocks, comments, rewrites, and global instructions.
+7. `DocumentWatcher` — watches source/review files and emits reload events.
+8. `ReviewSurfaceMachine` — browser-side keyboard/selection/draft/send lifecycle.
+9. `PortlessRoute` — stable local URL per product namespace.
+10. `KeystrokCredit` — license/credit surface for adapted keyboard UI code.
+11. `BrainGraph` — Brain docs as the durable self-documenting rig.
+12. `DocumentHost` — local SvelteKit/mdsvex server shared by product adapters.
+13. `DocumentAdapter` — project-specific parser/renderer/action contract.
+14. `SupportPageAdapter` — AI Hero support queue/review pack implementation on top of pi-notes.
+15. `FeedbackAdapter` — pi-feedback integration that renders assistant output in the shared review surface.
+16. `GraphEnginePrototype` — next explicit dogfood prototype for nodes, block refs, edge types, backlinks, review queues, and session feedback state.

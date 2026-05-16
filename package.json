@@ -1,0 +1,74 @@
+{
+  "name": "pi-notes",
+  "version": "0.0.0",
+  "type": "module",
+  "keywords": ["pi-package", "pi-extension", "local-notes", "review-documents"],
+  "files": [
+    "BRAIN.md",
+    "README.md",
+    "extensions/",
+    "skills/",
+    "scripts/",
+    "src/",
+    "docs/diagrams/",
+    "svelte.config.js",
+    "vite.config.ts",
+    "tsconfig.json"
+  ],
+  "scripts": {
+    "dev": "vite dev --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write .",
+    "brain:check": "bun scripts/check-brain.ts",
+    "rig:install": "bun scripts/install-rig.ts",
+    "notes:inbox": "bun scripts/read-notes-inbox.ts",
+    "diagram:compile": "bun scripts/compile-diagram.ts",
+    "test": "vitest run"
+  },
+  "pi": {
+    "extensions": ["./extensions/pi-notes/index.ts"],
+    "skills": ["./skills"]
+  },
+  "dependencies": {
+    "@hugeicons/core-free-icons": "^4.1.4",
+    "@hugeicons/svelte": "^1.1.2",
+    "@libsql/client": "^0.17.3",
+    "@sveltejs/adapter-node": "latest",
+    "@sveltejs/kit": "latest",
+    "@sveltejs/vite-plugin-svelte": "latest",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "latest",
+    "@types/node": "latest",
+    "bits-ui": "latest",
+    "clsx": "latest",
+    "effect": "latest",
+    "lucide-svelte": "latest",
+    "mdsvex": "latest",
+    "shiki": "^4.0.2",
+    "svelte": "latest",
+    "tailwind-merge": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest",
+    "xstate": "latest"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@earendil-works/pi-ai": "*",
+    "typebox": "*",
+    "prettier": "latest",
+    "prettier-plugin-svelte": "latest",
+    "svelte-check": "latest"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@earendil-works/pi-ai": "*",
+    "typebox": "*"
+  },
+  "packageManager": "bun@1.2.0"
+}

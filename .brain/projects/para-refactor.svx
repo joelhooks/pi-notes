@@ -1,0 +1,105 @@
+---
+status: done
+---
+
+# Brain PARA Refactor
+
+This page is a reviewable working plan and receipt for sorting the current pi-notes Brain entries into PARA instead of pretending every entry is a Project.
+
+## Sorting rule
+
+Use the question from `BRAIN.md`: **Where will this be useful next?**
+
+- **Projects**: active outcomes we are trying to ship.
+- **Areas**: ongoing responsibilities we maintain.
+- **Resources**: durable reference material we consult.
+- **Archives**: inactive, superseded, or historical material.
+
+Flat `.brain/*.svx` entries render under Projects as a fallback. That fallback is useful for migration, but it is not a thoughtful classification.
+
+## Proposed Projects
+
+These are active outcomes or build tracks.
+
+- `agent-loop.svx` — active work to make browser Review Batches reliably reach the Spawned Session and produce Review Receipts.
+- `brain-migration.svx` — active migration from the old graph shape into native `.brain/*.svx` and routes.
+- `dogfood.svx` — active dogfood plan for making pi-notes use its own Review Surface.
+- `rig-installer.svx` — active work to install the pi-notes knowledge rig into other repos.
+- `sequence-review.svx` — active extraction track for bringing AI Hero sequence-review patterns into pi-notes.
+
+## Proposed Areas
+
+These are ongoing responsibilities or maintained surfaces.
+
+- `architecture.svx` — maintained system shape, runtime seams, and lifecycle language.
+- `build-process.svx` — maintained build receipts and reproducible validation knowledge.
+- `concepts.svx` — maintained canonical vocabulary.
+- `review.svx` — maintained review/risk queue for the scaffold.
+
+## Proposed Resources
+
+These are reference material we consult while building.
+
+- `brain.svx` — operating model derived from `BRAIN.md` and second-brain ideas.
+- `common-core.svx` — reusable substrate concepts across pi-notes, AI Hero, sequence review, and pi-feedback.
+- `graph-model.svx` — graph/reference model inspiration and design direction.
+- `references.svx` — source subtree policy and upstream references.
+- `roam-research.svx` — research evidence from Joel's Roam archive.
+
+## Proposed Archives
+
+These might stay empty for now.
+
+No current entries are clearly inactive enough to archive. If `brain-migration.svx` stops being active after the migration settles, move it here.
+
+## Applied filesystem moves
+
+```text
+.brain/projects/agent-loop.svx
+.brain/projects/brain-migration.svx
+.brain/projects/dogfood.svx
+.brain/projects/rig-installer.svx
+.brain/projects/sequence-review.svx
+
+.brain/areas/architecture.svx
+.brain/areas/build-process.svx
+.brain/areas/concepts.svx
+.brain/areas/review.svx
+
+.brain/resources/brain.svx
+.brain/resources/common-core.svx
+.brain/resources/graph-model.svx
+.brain/resources/references.svx
+.brain/resources/roam-research.svx
+
+.brain/index.svx
+.brain/projects/para-refactor.svx
+```
+
+Keep `index.svx` at the root as the graph index. This refactor receipt moved under Projects while the gardening work remains active.
+
+## Review questions
+
+1. Should `common-core.svx` be an Area instead of a Resource because it is the maintained substrate language?
+2. Should `sequence-review.svx` be a Project while extraction is active, then become a Resource after the adapter is built?
+3. Should `build-process.svx` stay an Area, or is it a Resource once the scaffold stabilizes?
+4. Should `para-refactor.svx` become a Project only while the sorting work is active, then archive it?
+
+## Acceptance criteria for the move
+
+- Routes continue to work for nested PARA paths like `/notes/projects/agent-loop`.
+- Existing wikilinks still resolve or get mapped by slug.
+- Review Batch payloads preserve source paths after moves.
+- `bun run brain:check` passes.
+- The `/notes` index feels like a useful navigation page, not a file dump.
+
+## Move receipt
+
+Applied the first PARA gardening pass:
+
+- Projects: active build tracks and this refactor page.
+- Areas: architecture, build process, concepts, and review queues.
+- Resources: operating model, common core, graph model, source references, and Roam research.
+- Archives: empty until an entry is clearly inactive.
+
+Open questions remain around whether `common-core` should graduate into Areas once it becomes an actively maintained substrate contract.

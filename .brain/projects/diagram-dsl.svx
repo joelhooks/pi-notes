@@ -1,0 +1,190 @@
+---
+status: active
+---
+
+# Diagram DSL
+
+Local URL: `http://127.0.0.1:4188/notes/projects/diagram-dsl`
+
+## Purpose
+
+Build a small source format for clean system DAGs that compiles to Excalidraw.
+
+Excalidraw JSON is the artifact, not the authoring source.
+
+## Current decisions
+
+Canonical diagram sources should be standalone DSL files:
+
+```text
+docs/diagrams/*.diagram
+```
+
+Brain pages link to the `.diagram` source or generated `.excalidraw` artifact. The Document Host can render the generated Excalidraw inline.
+
+Generated artifacts use a derived path:
+
+```text
+docs/diagrams/foo.diagram
+→ docs/diagrams/foo.excalidraw
+```
+
+No explicit `output:` field by default.
+
+This is basically a hashed block-reference model: the visible note link stays simple, while the system can track the Diagram Source path plus content hash and know whether the Diagram Artifact is stale.
+
+The generated `.excalidraw` artifact should embed Diagram Source metadata directly, including:
+
+- source path
+- source content hash
+- compiler version
+- generated timestamp
+
+That keeps stale detection portable when a diagram file is copied or opened outside the repo.
+
+## Why not raw Excalidraw JSON
+
+Raw Excalidraw JSON is noisy and hostile to agents. It mixes durable meaning with coordinates, seeds, versions, and rendering metadata.
+
+Agents should edit the concise source and let a compiler regenerate the artifact.
+
+## Why not Mermaid as canonical
+
+Mermaid is useful as an import/export bridge, but it does not encode the house style tightly enough:
+
+- spacing presets
+- lane placement
+- receipt/log rows
+- label length constraints
+- Excalidraw style tokens
+- deterministic output paths and ids
+
+## Grammar decision
+
+Start with a tiny DAG-only grammar.
+
+The grammar should support:
+
+- `dag` declaration
+- direction, spacing, theme, and aspect/layout policy
+- uniform node declarations with label/subtitle
+- directed edges with optional short labels using simple arrow lines
+- coarse layout hints such as `rank` and `lane`
+- optional bottom-row lanes for low-emphasis supporting artifacts
+- line comments starting with `#`, ignored by the compiler
+
+Lanes in v1 are only bottom-row hints such as `lane: support` or `lane: receipts`. They are not full swimlanes. Use them to keep logs, receipts, cache files, and secondary artifacts out of the primary causal path.
+
+Do not include semantic node types in the first grammar. Uniform nodes keep the visual language plain and prevent type-driven styling sprawl.
+
+Manual positioning is limited to coarse hints. Allow `rank` and `lane`, but do not allow explicit `x`/`y` coordinates in v1. The compiler owns pixel layout.
+
+Ranks should be inferred from the graph by default. Authored `rank` is an escape hatch for correcting weird layout, not required boilerplate.
+
+Line comments are allowed for source notes and are ignored by the compiler:
+
+```text
+# Browser feedback enters through the Document Host.
+Surface -> Bridge: send
+```
+
+Avoid general-purpose styling, conditionals, nested subgraphs, and Mermaid compatibility in the first pass. The point is to make clean diagrams easier than messy ones. Mermaid import/export is explicitly deferred.
+
+If a diagram exceeds the clean DAG limits, render it anyway but emit a visible warning. The warning should name the likely readability issue and suggest a split, but it should not block artifact generation. Long node labels should also warn and render anyway.
+
+Warnings should be embedded in artifact metadata and surfaced in the rendered note UI, probably as a small footer under the inline diagram. The point is to keep the warning attached to the diagram without dominating the reading surface.
+
+## Style policy
+
+The default visual style should be minimal and plain.
+
+Use:
+
+- white or near-white backgrounds
+- thin neutral borders
+- dark readable text
+- one muted accent only when it improves grouping
+- strict short labels: `label` around 24 characters, `sub` around 32 characters
+- no shadows, gradients, emoji, decorative icons, or loud color palettes
+
+Color should explain structure, not decorate the diagram. Most diagrams should work in grayscale.
+
+## Layout policy
+
+The compiler should use the screen real estate effectively, especially wide note cards.
+
+Default policy:
+
+- prefer left-to-right ranked DAGs
+- spread primary nodes across the available width
+- keep labels readable instead of shrinking boxes
+- increase horizontal spacing before increasing vertical stacking
+- route receipts/logs/supporting artifacts into a low-emphasis bottom lane
+- minimize edge crossings before preserving declaration order
+- keep arrows mostly straight
+- use whitespace intentionally, not accidentally
+
+Layout should be deterministic-first with an optional seeded optimization pass. Start with ranked DAG placement, then apply bounded stable adjustments to reduce crossings, collisions, and crowding. Avoid full force-directed chaos unless explicitly requested.
+
+The first compiler should use a hand-rolled rank layout. The initial scope is narrow enough that a small in-repo layout pass is better than importing Dagre or ELK immediately. Keep the Diagram Source contract stable so the implementation can swap to a library later if needed.
+
+The first implementation slice should include both compiler and note rendering support: `.diagram` sources compile to derived `.excalidraw` artifacts, and notes can inline-render the generated artifact from the source reference. A watcher can come later.
+
+Compiler logic should live in a reusable library module with a thin CLI script:
+
+```text
+src/lib/server/diagram-compiler.ts
+scripts/compile-diagram.ts
+```
+
+The note renderer can reuse parsing and stale-detection helpers, while the script owns file writes.
+
+The note renderer must not mutate files during page load. If a `.diagram` source is missing a generated artifact or the artifact is stale, render a warning plus the exact compile command, for example:
+
+```text
+bun run diagram:compile docs/diagrams/foo.diagram
+```
+
+## Strawman source
+
+```text
+dag "pi-notes feedback loop" {
+  direction: LR
+  spacing: relaxed
+  theme: notes
+  layout: wide
+
+  BrainNote [label: "Brain note", sub: ".brain/*.svx"]
+  Host [label: "Rendered page", sub: "Document Host"]
+  Surface [label: "Feedback", sub: "Review Surface"]
+  Bridge [label: "Bridge", sub: "FIFO send"]
+  Session [label: "Pi session", sub: "edits + receipt"]
+
+  BrainNote -> Host: render
+  Host -> Surface
+  Surface -> Bridge: send
+  Bridge -> Session: inject
+
+  Trace [label: "Trace log", sub: "events.jsonl", lane: receipts]
+  Receipt [label: "Receipt", sub: "batch handled", lane: receipts]
+
+  Bridge -> Trace
+  Session -> Receipt
+}
+```
+
+## Edge labels
+
+Edges use simple arrow lines:
+
+```text
+BrainNote -> Host: render
+Host -> Surface
+```
+
+When an edge has a label, render it close to a connected node rather than floating in the middle of open space. Prefer the target endpoint because left-to-right DAG labels usually read as what arrives or causes the next node. The compiler may move labels toward the source endpoint when target-side placement collides or reads poorly.
+
+## Open decisions
+
+- How tiny can the grammar be while still handling useful system DAGs?
+- How should the note UI present stale `.diagram` artifacts once compiler metadata exists?

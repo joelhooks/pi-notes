@@ -1,0 +1,81 @@
+# Concepts
+
+Canonical vocabulary for the local Pi review-document system.
+
+## Pi Note
+
+A local review document generated from or opened by a Pi session. A Pi Note can be read like a static page but can also send review turns back to its spawning Pi session.
+
+## Product Namespace
+
+A stable slug that scopes notes, routes, source files, assets, and bridge state for one product or project.
+
+## Review Document
+
+A typography-first page for inspecting generated material and giving precise feedback. It should support keyboard navigation, block selection, comments, rewrites, and batch sends.
+
+## Document Host
+
+The local SvelteKit/mdsvex server that renders reviewable documents. It provides routes, assets, theme defaults, adapter loading, and bridge endpoints.
+
+## Document Adapter
+
+A project-specific module that teaches the Document Host how to load, parse, render, and address one document family.
+
+It may ingest `.mdx`, `.svx`, `.md`, JSON, or database-backed documents.
+
+## Spawned Session
+
+The Pi session that created the review document. The session identity is the default routing target for feedback batches.
+
+## Pi Bridge
+
+The local bridge between browser review UI and the spawned Pi session. It accepts feedback batches, sends them to Pi as user turns, and emits status and document-change events back to the browser.
+
+## Local Site Actor
+
+A lifecycle-managed process that serves product-namespaced review documents locally. It starts, advertises a stable portless route, watches files, and shuts down on Pi session shutdown.
+
+## Source Subtree
+
+A shallow, vendored source snapshot under `repos/` used as local reference material. It is not a runtime dependency and must be excluded from TypeScript, SvelteKit, Vite, and formatting scans.
+
+## Review Turn
+
+A feedback payload sent from a review document into Pi as a user message. Review turns may include selected block ids, current text, comments, requested rewrites, and global instructions.
+
+## Document Event Stream
+
+SSE/WebSocket stream from the local site to the browser. It reports bridge status, Pi turn status, file changes, reload hints, and errors.
+
+## Keyboard Review Surface
+
+The browser UI layer inspired by keystrok: minimal chrome, strong focus states, command palette or key hints, and predictable keyboard movement.
+
+## Support Page
+
+A product adapter surface for support operations. It can render queue cards, review packs, customer/context evidence, or draft replies while sending operator comments back into Pi as Review Turns.
+
+## Build Capture
+
+A durable note about the build process: decision, insight, gotcha, code change, concept, risk, or next step. Captures start as gremlin entries but must graduate into focused Brain topics.
+
+## Course-Like Build
+
+A product build treated as teachable source material. Agents preserve not just code, but the concepts, tradeoffs, workflow, and validation path needed to reconstruct the work later.
+
+## pi-notes Knowledge Rig
+
+The future replacement for Brain in this project: customizable mdsvex/Svelte knowledge pages with graph validation and active Pi-session feedback.
+
+## Agent-Loop Graph
+
+A local knowledge graph where agents capture, propose, review, merge, and validate graph changes as part of normal Pi session work.
+
+## Graph Edge
+
+A typed or inferred relationship between nodes, blocks, source files, decisions, concepts, receipts, or review items.
+
+## Block Reference
+
+A Roam-inspired reference to a specific block-level unit of knowledge, useful for backlinks, review comments, and precise agent edits.

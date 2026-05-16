@@ -1,0 +1,97 @@
+# Graph Model
+
+pi-notes should use graph edges like Obsidian and construct knowledge like Roam Research, with the agent loop built into the core system.
+
+## Core decision
+
+We do like Obsidian-style graph edges and Roam-style knowledge construction. We do not want Obsidian as the product surface.
+
+The local `egghead-roam-research` archive gives this direction receipts: its historical export has `60,993` reference edges, `15,687` unique reference targets, and `207,567` block strings. See [[roam-research]].
+
+pi-notes should make graph construction an active agent workflow, not a passive pile of notes.
+
+## Obsidian ideas to keep
+
+Obsidian gets the local graph feeling right:
+
+- bidirectional links
+- visible graph edges
+- backlinks
+- local-first files
+- cross-note navigation
+- lightweight authoring
+
+Keep these as graph capabilities, but render them through customizable pi-notes project UIs.
+
+## Roam ideas to keep
+
+Roam's valuable idea is incremental knowledge construction through linked blocks and evolving concepts.
+
+Borrow:
+
+- block-level references
+- backlinks as thinking surface
+- daily/session capture that gets refactored into durable concepts
+- emergent structure from repeated links
+- concept pages that become stronger over time
+- graph traversal as writing and thinking aid
+
+Avoid turning this into a chaotic outliner. pi-notes should keep project-specific structure and agent-maintained cleanup loops.
+
+## Agent loop layer
+
+The differentiator is that graph construction is wired into Pi sessions.
+
+Agents should be able to:
+
+- capture decisions, concepts, risks, gotchas, and next steps while working
+- propose new graph edges
+- detect orphaned or duplicate concepts
+- fold session captures into durable topic pages
+- render review queues for unresolved graph work
+- accept browser feedback as Review Batches
+- update graph files with explicit receipts
+
+The graph is not just documentation. It is the substrate for agent memory, review, and project-specific operating context.
+
+## Core fiber
+
+Graph operations belong in the core fiber of pi-notes:
+
+- Document Host renders graph nodes and review surfaces.
+- Document Adapter normalizes `.svx`, `.md`, `.mdx`, JSON, DB rows, and support queues into graph nodes/blocks.
+- Session Bridge sends graph feedback into the active Pi session.
+- Review Surface makes graph edits inspectable and commentable.
+- Graph Engine tracks nodes, block refs, backlinks, source refs, and validation.
+
+## Product implication
+
+Do not frame pi-notes as a static site or markdown renderer. Frame it as an agent-connected local knowledge graph workbench.
+
+The UI should support project-custom review modes:
+
+- concept map
+- backlink review
+- orphan review
+- duplicate concept merge review
+- source-grounding review
+- support queue review
+- sequence review
+- narrative/story beat review
+
+Every mode should preserve the same loop: render graph context, collect precise feedback, send structured intent to Pi, agent updates source, browser refreshes.
+
+## Next prototype
+
+The next prototype should make Graph Engine state explicit and inspectable.
+
+Model these first:
+
+- nodes
+- block refs
+- edge types
+- backlinks
+- review queues
+- session feedback state
+
+This came from the first browser-saved pi-notes dogfood batch. The loop worked: browser selected `graph-model.block-4`, saved a Review Batch to `.pi/notes-inbox`, and the agent read it with `bun run notes:inbox` before updating this graph.

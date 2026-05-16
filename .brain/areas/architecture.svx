@@ -1,0 +1,48 @@
+# pi-notes Architecture
+
+System boundaries, actors, and implementation posture for pi-notes.
+
+## Shape
+
+pi-notes is a Pi extension package with a local SvelteKit review surface. It should become the shared substrate for product-specific local document apps.
+
+Related: [[common-core]].
+
+```
+Pi session
+  ├─ extension command/tool
+  ├─ local site actor
+  ├─ Pi Bridge
+  └─ product namespace registry
+        │
+        ▼
+portless route → SvelteKit/mdsvex review document → feedback batch → spawned Pi session
+```
+
+## Runtime boundaries
+
+Each runtime boundary has a single owner so lifecycle cleanup and session routing stay legible.
+
+- **Pi extension** owns commands, tools, session identity, and lifecycle cleanup.
+- **Local site actor** owns SvelteKit server startup, port, portless alias, and shutdown.
+- **Pi Bridge** owns feedback routing and status streaming.
+- **Review UI** owns document reading, keyboard navigation, selection state, batching, and send affordances.
+- **Document Adapter** owns project-specific parsing, routing, block identity, and domain actions.
+- **Source subtrees** provide reference source only. They are not imported by app code.
+
+## State machines
+
+Use XState v5 where lifecycle is finite and observable:
+
+- site actor: `idle → starting → ready → stopping → stopped` plus `failed`
+- bridge actor: `idle → ready → sending → ready` plus `failed`
+- review UI: `reading → selecting → drafting → queued → sending → updated`
+- adapter lifecycle: `registered → loading → ready → invalid → unloaded`
+
+## Effect services
+
+Use Effect services for filesystem, process, portless, bridge, and session APIs. Service methods should be typed and testable; provide concrete layers at the app/extension boundary.
+
+## UI posture
+
+Typography-first. The page should feel like a sharp review manuscript, not a dashboard. Navigation should be keyboard-native with visible focus and tiny persistent key hints.

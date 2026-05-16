@@ -1,0 +1,61 @@
+# Excalidraw Diagrams
+
+pi-notes should support simple system diagrams as first-class reviewable artifacts.
+
+Local URL: `http://127.0.0.1:4188/notes/resources/excalidraw-diagrams`
+
+## Direction
+
+Use Excalidraw for lightweight architecture, workflow, and graph-shape diagrams.
+
+A local skill now captures the house style:
+
+```text
+skills/excalidraw-dag/SKILL.md
+```
+
+The style is intentionally narrow: clean DAGs, left-to-right flow, 4–8 boxes, straight arrows, short labels, no decorative sludge.
+
+The first dogfood artifact is:
+
+```text
+docs/diagrams/pi-notes-feedback-loop.diagram
+```
+
+It diagrams the current browser-to-agent loop:
+
+- Brain pages in `.brain/**/*.svx`
+- Document Host rendering SVX
+- Review Surface collecting feedback
+- Review Batch payloads
+- Session Bridge delivery
+- Spawned Pi Session source edits
+- Review Receipts
+- Trace Log
+
+## Product shape
+
+A future pi-notes diagram capability should be boring and useful:
+
+1. Agent creates or updates `.excalidraw` files from project architecture notes.
+2. Document Host lists diagrams alongside Brain entries.
+3. Browser opens diagrams as readable review artifacts.
+4. Review Surface sends comments back to the spawning Pi session.
+5. Agents update the diagram file and leave a receipt.
+
+## Boundary
+
+Do not build a full diagram editor inside pi-notes first. Excalidraw already owns editing. pi-notes should own:
+
+- generation
+- routing
+- review batches
+- source-grounded updates
+- receipts
+
+## Useful next diagrams
+
+- Document Host / Document Adapter / Review Surface / Session Bridge runtime boundaries
+- Review Batch lifecycle state machine
+- PARA Brain graph layout
+- AI Hero sequence-review adapter pipeline

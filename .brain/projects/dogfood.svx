@@ -1,0 +1,42 @@
+---
+status: active
+---
+
+# Dogfood
+
+pi-notes must use its own Document Host and Review Surface immediately, so the package feels real before product adapters exist.
+
+## First dogfood page
+
+The first dogfood route is `/pi-notes`. It reads this repo's own `.brain/*.svx` files and renders them as reviewable blocks.
+
+This is intentionally small:
+
+- source is the local knowledge graph
+- adapter is a server-side Brain document loader
+- blocks have stable ids and hashes
+- browser preview uses the same review-card shape future adapters need
+- browser selection/comment queue saves Review Batches into `.pi/notes-inbox`
+- real Pi Bridge sendUserMessage behavior is still pending
+
+## Dogfood constraints
+
+Do not fake the architecture with a hardcoded marketing page. The page must flow through a real loader and typed review document model.
+
+The first loader is `src/lib/server/brain-docs.ts`. It is not the final adapter API, but it proves the seam:
+
+- source path in
+- semantic review documents out
+- stable block ids
+- block hashes
+- source path provenance
+
+## Findings
+
+The dogfood page makes the missing pieces obvious:
+
+1. Need a formal `DocumentAdapter` interface instead of a one-off Brain loader.
+2. Need a shared `ReviewDocument` and `ReviewBlock` schema.
+3. Need selection/comment queue state in Svelte, preferably an XState v5 review surface machine.
+4. Direct SSE/HTTP bridge is the primary dogfood loop: browser posts Review Batch to the Pi extension bridge, the extension injects it into the active Pi session, and SSE reports status back to the page.
+5. `/notes open` now gives the active session a local Brain URL and starts the bridge, so browser review batches become Pi turns without a bullshit polling watcher.

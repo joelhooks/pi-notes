@@ -1,0 +1,50 @@
+# Common Core
+
+Shared substrate for pi-notes, AI Hero support pages, sequence review, and pi-feedback style review flows.
+
+## Core idea
+
+A local document surface is a small local web app bound to a Pi session. The page renders local documents, lets the operator annotate or batch feedback, and sends those review turns back into Pi.
+
+## Shared primitives
+
+The substrate is a small set of reusable contracts, not a pile of bespoke local review pages.
+
+### Document Host
+
+The local SvelteKit/mdsvex server that renders reviewable material. It owns routes, theming, document loading, and browser assets. MDX-shaped source should be normalized through adapters before Svelte rendering.
+
+### Document Adapter
+
+A project-specific module that teaches the Document Host how to load, parse, render, and address one document family. AI Hero support can provide adapters for support queues, sequence reviews, value-path docs, and campaign previews.
+
+### Review Surface
+
+The browser UI shell for reading, selecting, commenting, queueing, and sending. It should be shared and themable, while adapters provide domain-specific blocks and actions.
+
+### Session Bridge
+
+The Pi extension side of the system. It binds a local page to the spawning Pi session, accepts review batches, turns them into user messages, and streams status back to the browser.
+
+### Review Batch
+
+The transport payload from the Review Surface to the Session Bridge. It should be domain-neutral: selected targets, current text, comments, rewrites, global instruction, source hash, and adapter metadata.
+
+### Event Stream
+
+SSE or WebSocket channel for `ready`, `changed`, `sent`, `failed`, `pi-working`, `pi-done`, and adapter-specific events.
+
+## Relationship between projects
+
+pi-notes should be the backend/substrate package. Support rigs and feedback extensions should install or depend on it, then provide adapters.
+
+- **pi-notes**: extension, document host, session bridge, shared review surface, adapter contracts.
+- **AI Hero support**: adapter package/config for support queues, sequence review documents, value path/campaign review pages.
+- **pi-feedback**: adapter that turns assistant output or markdown files into a readable review page instead of only opening Cursor diffs.
+- **sequence-review-app**: prototype/evidence for the batch feedback loop, SSE reload loop, document hash, and selected block payload shape. See [[sequence-review]].
+
+## Architecture implication
+
+Do not build one-off local pages per project forever. Extract the common substrate into pi-notes and let product repos register adapters. The page becomes the local document server; the adapter decides what a document means.
+
+Related: [[brain-migration]].

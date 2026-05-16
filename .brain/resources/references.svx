@@ -1,0 +1,52 @@
+# References
+
+Local source subtree references and their usage rules.
+
+## Pi source
+
+`repos/pi` is the canonical shallow source snapshot from `https://github.com/earendil-works/pi`.
+
+Read first:
+
+- `repos/pi/AGENTS.md`
+- relevant package docs/source when checking extension lifecycle, session/RPC behavior, `sendUserMessage`, or whether SvelteKit can target an existing Pi session without a custom bridge
+
+`repos/pi-mono` is the local shallow source snapshot for Pi extension API references and examples.
+
+Read first:
+
+- `repos/pi-mono/AGENTS.md`
+- `repos/pi-mono/packages/coding-agent/README.md` when working on coding-agent behavior
+- `repos/pi-mono/examples/extensions/` for extension patterns when available
+
+Installed docs are also available at `/Users/joel/.bun/install/global/node_modules/@earendil-works/pi-coding-agent/docs/`.
+
+## Effect source
+
+`repos/effect` is a shallow source subtree for Effect patterns.
+
+Read first:
+
+- `repos/effect/AGENTS.md`
+- `repos/effect/packages/effect/src/` when checking actual APIs
+
+## Keystrok source
+
+`repos/keystrok` is a shallow source subtree for keyboard-first interaction and design inspiration.
+
+License: MIT, copyright Kunal Tanwar. Preserve the license notice if copying substantial code or design implementation.
+
+## Refresh shape
+
+```bash
+rm -rf repos/pi repos/pi-mono repos/effect repos/keystrok
+git clone --depth 1 https://github.com/earendil-works/pi repos/pi
+git clone --depth 1 file:///Users/joel/Code/joelhooks/pi-mono repos/pi-mono
+git clone --depth 1 file:///Users/joel/Code/effect-ts/effect repos/effect
+git clone --depth 1 https://github.com/KunalTanwar/keystrok.git repos/keystrok
+rm -rf repos/pi/.git repos/pi-mono/.git repos/effect/.git repos/keystrok/.git
+```
+
+## Exclusion policy
+
+`repos/` must be excluded from TypeScript, SvelteKit, Vite, formatter, and normal dependency scans. These source trees are evidence/reference, not part of pi-notes runtime.

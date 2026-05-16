@@ -1,0 +1,19 @@
+node_modules
+.svelte-kit
+.vercel
+.env
+.env.*
+!.env.example
+dist
+build
+.DS_Store
+
+.pi/notes-bridge/
+.pi/notes-inbox/
+.pi/course-log.jsonl
+
+# Reference repos are shallow source subtrees. They are intentionally ignored by tooling scans;
+# force-add refreshed snapshots when we deliberately vendor them.
+repos/*
+!repos/.gitignore
+!repos/README.md

@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  color-scheme: light dark;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  background: #fbfaf7;
+  color: #171512;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: #d9c7ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    background: #11100e;
+    color: #f4efe7;
+  }
+}

@@ -1,0 +1,195 @@
+---
+status: queued
+---
+
+# Sequence Review Adapter
+
+AI Hero sequence-review is the clearest prototype for pi-notes: component-aware MDX-like source review, inline feedback, batch payload, Pi-owned source edits, and browser reload on file change.
+
+## Source context
+
+The concrete AI Hero artifact is `docs/value-paths/ai-hero-skills-workflow-sequence.mdx` in `/Users/joel/Code/badass-courses/aihero-support`.
+
+Earlier prototype sources existed in `prototypes/sequence-review/` and later moved toward `tools/sequence-review-app/` plus a project-local `.pi/extensions/sequence-review/index.ts`.
+
+## Desired flow
+
+The operator loop starts in Pi, moves into the browser for precise review, then returns structured intent to Pi for source edits.
+
+1. Pi command opens a local browser app.
+2. Browser renders MDX as the real recipient-facing preview, not raw source.
+3. Operator selects one or more blocks/components.
+4. Operator adds comments or rewrite requests.
+5. Browser queues feedback.
+6. Send produces one structured Review Batch.
+7. Pi agent edits the source MDX directly.
+8. Browser updates through file watch, HMR, SSE, or polling.
+
+## Adapter contract pressure
+
+Sequence review needs a Document Adapter that can parse custom MDX components and return stable reviewable blocks. pi-notes renders with SvelteKit/mdsvex, so MDX is an input/source format, not the Svelte rendering layer.
+
+Near-term MDX components:
+
+- `EmailSequence`
+- `EmailPlan` or `Email`
+- `Subject`
+- `Preview`
+- `Body`
+- `CTA`
+- `Survey`
+- `Question`
+- `Option`
+- `ResultPage`
+- `ProductNotes`
+- `LanguageNote`
+
+Likely later components:
+
+- `SegmentPath`
+- `ShareCTA`
+- `CertificateNote`
+- `SkillRef`
+- `KitTag`
+- `KitField`
+
+Use Unified, not regex, when ingesting existing `.mdx` campaign source:
+
+- `unified`
+- `remark-parse`
+- `remark-mdx`
+- `remark-gfm`
+- AST extraction for MDX JSX nodes
+
+Use mdsvex for native Svelte-authored review documents, typically `.svx` or `.md` configured through `svelte.config.js`.
+
+## Review rules
+
+These constraints preserve the private campaign-review UX while keeping source edits owned by Pi.
+
+- Recipient-facing preview comes first.
+- Internal planning notes are visible, quiet, and commentable.
+- Survey/quiz options are links/buttons, not radio buttons.
+- No selected/correct answer visual state in recipient preview.
+- Browser never writes MDX directly.
+- Pi owns final file edits.
+- Only one agent run at a time.
+- Draft comments are allowed while running.
+- Sending is disabled while running.
+- Copy/fake-send is acceptable first; automatic worker runs are later.
+- Avoid lasagna boxes in boxes.
+
+## Payload shape
+
+The prototype payload is good and should generalize into `ReviewBatch`.
+
+```ts
+type ReviewBatch = {
+  type: string;
+  documentPath: string;
+  documentHash: string;
+  mode?: string;
+  adapterId: string;
+  documentId: string;
+  comments: ReviewComment[];
+  globalInstruction: string;
+  expectedAgentAction: string;
+};
+
+type ReviewComment = {
+  id: string;
+  kind: "comment" | "rewrite";
+  status: "queued" | "sent";
+  blockIds: string[];
+  blockKind: string;
+  currentText: string;
+  comment: string;
+  replacement?: string;
+  documentHash: string;
+};
+```
+
+Resolution from Pi should report handled, partial, and unhandled comments:
+
+```ts
+type ReviewResolution = {
+  handledCommentIds: string[];
+  partiallyHandledCommentIds: string[];
+  unhandledCommentIds: string[];
+  notesByCommentId: Record<string, string>;
+  changedBlocks: string[];
+  summary: string;
+};
+```
+
+## Proposed sequence data model
+
+The sequence adapter needs a typed semantic model separate from raw MDX/mdsvex source and separate from the shared Review Batch transport.
+
+```ts
+type CampaignDoc = {
+  id: string;
+  title: string;
+  product?: string;
+  mode?: string;
+  source?: string;
+  hash: string;
+  emails: CampaignEmail[];
+  productNotes?: CampaignBlock[];
+};
+
+type CampaignEmail = {
+  id: string;
+  title: string;
+  type?: string;
+  skill?: string;
+  subject?: CampaignBlock;
+  preview?: CampaignBlock;
+  body: CampaignBlock[];
+  cta?: CampaignBlock[];
+  surveys: CampaignSurvey[];
+  notes: CampaignBlock[];
+};
+
+type CampaignSurvey = {
+  id: string;
+  type: "segmentation" | "quiz" | string;
+  question: CampaignBlock;
+  options: CampaignSurveyOption[];
+};
+
+type CampaignBlock = {
+  id: string;
+  kind: string;
+  text: string;
+  hash: string;
+  sourceRange?: { startLine: number; endLine: number };
+};
+
+type CampaignSurveyOption = CampaignBlock & {
+  value: string;
+  correct?: boolean;
+};
+```
+
+## What pi-notes should extract
+
+The reusable primitive is not email review. It is component-aware document review with structured feedback batching. MDX/mdsvex are source syntaxes, not the core abstraction.
+
+Extract into pi-notes:
+
+- Document Host
+- Document Adapter interface
+- Review Surface
+- Review Batch schema
+- Session Bridge
+- Event Stream
+- source hash/block hash helpers
+- one-run-at-a-time send machine
+
+Keep in AI Hero support adapter:
+
+- email/Kit visual language
+- campaign-specific MDX component taxonomy and any mdsvex migration rules
+- value path and skill campaign semantics
+- support/campaign source paths

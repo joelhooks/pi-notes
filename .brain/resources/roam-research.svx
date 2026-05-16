@@ -1,0 +1,106 @@
+# Roam Research Source
+
+Joel's `egghead-roam-research` repository is a high-value source for pi-notes because it contains a historical Roam export plus deterministic analyses of graph/process behavior.
+
+## Source location
+
+Remote source on panda:
+
+```txt
+~/Code/joelhooks/egghead-roam-research
+```
+
+Canonical dataset:
+
+```txt
+egghead-2026-01-19-13-09-38.edn
+```
+
+The source repository's safety rule says the EDN export is read-only and generated outputs should be written as new files.
+
+## Evidence snapshot
+
+From `summary.edn`:
+
+- time range: `2019-12-08` through `2026-01-19`
+- block strings: `207,567`
+- pages with titles: `5,612`
+- reference edges: `60,993`
+- unique reference targets: `15,687`
+- top tags include `process` (`273`), `question` (`237`), `comment` (`228`), and `prompt` (`182`)
+- top wikilinks include `DONE`, `TODO`, `Working On`, `Thinking About`, `egghead`, and `process`
+
+From `process-analysis.edn` and `process-automation-opportunities.md`:
+
+- `[[process]]` has `289` referenced blocks
+- `#process` has `273` tagged blocks
+- overlap between `[[process]]` and `#process`: `272` blocks
+- process concentration was highest in `2022`: `223` process references, `79.08%` of the process corpus
+- high-leverage process automation areas identified: workshop setup, CRM/launch automation, content publishing, devops runbooks, support/finance ops
+
+From direct EDN block-string search on panda:
+
+- `second brain`: `18` block-string matches
+- exact `PARA` / `P.A.R.A.`: `20` block-string matches
+- `Progressive Summarization`: `17` block-string matches
+- `Tiago Forte`: `6` block-string matches
+- `Zettelkasten`: `0` block-string matches
+- `CODE framework`: `0` block-string matches
+
+Relevant source blocks:
+
+- `2020-12-16`: “well established PARA”
+- `2020-12-16`: “excellent for things that have an end (project vs area in PARA parlance)”
+- `2020-12-16`: “the PARA approach makes a lot of sense, and stuff is fairly easy to find through that lens”
+- `2020-12-16`: “Very compatible with `[[Shape Up]]` and `[[PARA]]`”
+- `2021-01-05`: “This is a philosophy on project management from Tiago Forte that captures my general thoughts on approaching project work and getting things done in general.”
+- `2021-01-07`: loose Dropbox files were moved to Archive and should be filed into PARA folders if important
+- `2021-03-02`: “Structuring v.p. interviews like PARA. Like Dropbox, notion, google sheets all people's names cross-referenced. Then an analysis board.”
+- `Just in Time Project Management`: clearly summarized knowledge packets plus Progressive Summarization organized by actionability with P.A.R.A. combine into valuable deliverables when needed
+- `2022-06-27`: “`[[PARA]]` is still a basis and the `[[Second Brain]]` concept holds up”
+- `2022-09-15`: “`[[PARA]]` and `[[The Process]]`” and “`[[PARA]]`'s influence on how we work”
+
+## Hierarchy retrieval gotcha
+
+Single block-string matches are weak evidence in Roam. The page objects for `[[PARA]]` and `[[Shape Up]]` can be nearly empty; the real context lives in backlink/reference hierarchies where a block references the page and then has structured children below it.
+
+A good Roam query should use Datascript/Datalog, not regex scraping:
+
+1. find the page eid by `:node/title`,
+2. find incoming ref blocks via `:block/refs`,
+3. include ancestor context from `:block/parents`,
+4. traverse descendants under each referencing block via `:block/children`,
+5. sort children by `:block/order`,
+6. collect descendant `:block/string` values in order,
+7. keep page title, block eid, uid, depth, and refs as receipts.
+
+The local helper now uses `datascript.db/db-from-reader` to load the Roam `#datascript/DB` export and query it with Datalog. The Python/regex path is fallback only.
+
+A first reference-hierarchy extraction found `4` incoming `[[PARA]]` ref blocks and `9` incoming `[[Shape Up]]` ref blocks. The page roots themselves had no useful descendants; the backlinks did.
+
+This matters for pi-notes because block refs need hierarchy-aware expansion. `locate`, `refs`, and review queues should offer “expand below this block/page” instead of only showing isolated blurbs.
+
+## Product implications for pi-notes
+
+Roam's graph shape should inform pi-notes, but pi-notes should not become a Roam clone.
+
+Useful source-backed implications:
+
+- pi-notes needs block-level graph edges because the historical export has tens of thousands of reference edges, not just page-level documents.
+- pi-notes needs process/runbook views because `process` was a dense recurring work category, especially in 2022.
+- pi-notes should support tags, wikilinks, and hierarchy-aware descendant expansion as first-class references because the Roam archive used all of these heavily.
+- pi-notes should treat canonical source and derived query index separately, matching the Roam repo ADR: EDN/source as immutable truth, Datahike/Datalog index as rebuildable query layer.
+- pi-notes review surfaces should help convert historical process notes into executable workflows and current project actions.
+
+## Source-backed architecture clue
+
+ADR-0001 in the source repo chooses a persistent Datascript-compatible Datalog layer via Datahike because repeated semantic lookups and relationship traversals are expensive against static EDN alone.
+
+For pi-notes, this supports a future split:
+
+- source files remain local-first truth
+- Graph Engine builds a deterministic query index
+- Review Surface uses the index for backlinks, refs, orphan detection, duplicate concepts, and process views
+- Session Bridge sends review decisions back to Pi for source edits
+
+Related: [[graph-model]], [[brain-migration]], [[brain]], [[agent-loop]].

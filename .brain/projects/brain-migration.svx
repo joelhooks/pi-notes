@@ -1,0 +1,60 @@
+---
+status: done
+---
+
+# Brain Migration
+
+pi-notes now uses `.brain/*.svx` as its native project knowledgebase.
+
+## Decision
+
+The project knowledge graph is authored as mdsvex/Svelte pages in `.brain/`. This is the source of truth for durable project memory, review notes, architecture notes, build receipts, and concepts.
+
+pi-notes should own:
+
+- mdsvex/Svelte-rendered project notes
+- project-customizable review documents
+- agent-session-connected feedback
+- structured Review Batches
+- graph validation and references
+- project-specific UI and adapters
+
+## What to keep
+
+Keep the useful graph safety rails:
+
+- local repo-owned knowledge graph
+- wiki-style concept links
+- check command for broken links and drift
+- leading paragraph summaries for important sections
+- source-code references from docs to implementation
+- optional code backlinks from source to docs
+- locate, section, refs, expand, and search-style navigation
+- agent hooks/instructions that keep docs updated during work
+
+## What to avoid
+
+Do not inherit Obsidian as the product surface. Keep graph edges and backlinks, but make the active UI pi-notes.
+
+Avoid:
+
+- treating plain markdown files as the final UX
+- making the terminal CLI the primary review surface
+- generic static-site generation
+- project-agnostic styling that cannot adapt to the repo’s workflow
+- hiding the Pi session bridge behind offline docs tooling
+
+## Native Brain shape
+
+pi-notes should provide a first-class local UI for project knowledge:
+
+- `.svx`/mdsvex authoring for native Brain pages
+- import adapters for existing `.md`, `.mdx`, JSON, DB, and support/workflow sources
+- rendered review pages connected to the active Pi session
+- comment/rewrite selection and batch feedback
+- customizable project themes and components
+- validation commands through `bun run brain:check`
+
+## Migration implication
+
+`.brain/` is the active project memory. Generated graph indexes, backlinks, source hashes, and cache files belong under `.pi/brain-cache/` or `.pi/notes-cache/`, not in `.brain/`.

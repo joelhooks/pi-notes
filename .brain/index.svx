@@ -1,0 +1,17 @@
+# pi-notes knowledge graph
+
+The human navigation index is programmatic.
+
+Open the rendered Brain index at:
+
+```text
+/notes
+```
+
+The Document Host discovers `.brain/**/*.svx`, sorts entries into PARA sections, and links each entry route automatically.
+
+## Rule
+
+Do not maintain a manual list of Brain pages here. Manual page lists rot immediately.
+
+Use this file only as the root marker for `brain:check` and as a short explanation of how the index works.

@@ -1,0 +1,48 @@
+---
+status: queued
+---
+
+# Rig Installer
+
+The pi-notes rig installer makes the self-documenting gremlin plus current graph scaffold easy to inject into project repos.
+
+## Command
+
+Run from the pi-notes repo:
+
+```bash
+bun run rig:install -- /path/to/project
+```
+
+The installer is idempotent. It creates missing files and appends one marked block to `.pi/APPEND_SYSTEM.md` without replacing existing project instructions.
+
+## Installed files
+
+This is currently Brain-compatible scaffolding. The direction is to evolve it into a native pi-notes knowledge rig. See [[brain-migration]].
+
+- `.pi/APPEND_SYSTEM.md`
+- `.pi/extensions/gremlin/index.ts`
+- `ID.md`
+- `TOOLS.md`
+- `.brain/Brain`
+- `.brain/areas/concepts.svx`
+- `.brain/areas/architecture.svx`
+- `.brain/areas/build-process.svx`
+- `.brain/areas/review.svx`
+
+If a target project has a `package.json`, the installer currently adds missing `brain` and `brain:check` scripts. Repos without package manifests use the global `brain` CLI.
+
+This is a bridge, not the final product. pi-notes should eventually provide its own check/search/render commands and use Brain ideas as prior art.
+
+## Safety rules
+
+The installer must not overwrite existing project context. It only creates missing files, appends a marked APPEND_SYSTEM block, and adds package scripts if a package manifest already exists.
+
+AI Hero support is a high-risk private operations repo with lots of existing uncommitted work. Installer behavior there must stay surgical.
+
+## First installs
+
+Bootstrapped targets:
+
+- `/Users/joel/Code/joelhooks/cascadia-2026`
+- `/Users/joel/Code/badass-courses/aihero-support`

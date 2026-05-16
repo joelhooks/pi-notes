@@ -1,0 +1,23 @@
+dag "pi-notes feedback loop" {
+  direction: LR
+  spacing: relaxed
+  theme: notes
+  layout: wide
+
+  BrainNote [label: "Brain note", sub: ".brain/*.svx"]
+  Host [label: "Rendered page", sub: "Document Host"]
+  Surface [label: "Feedback", sub: "Review Surface"]
+  Bridge [label: "Bridge", sub: "FIFO send"]
+  Session [label: "Pi session", sub: "edits + receipt"]
+
+  BrainNote -> Host: render
+  Host -> Surface
+  Surface -> Bridge: send
+  Bridge -> Session: inject
+
+  Trace [label: "Trace log", sub: "events.jsonl", lane: receipts]
+  Receipt [label: "Receipt", sub: "batch handled", lane: receipts]
+
+  Bridge -> Trace
+  Session -> Receipt
+}

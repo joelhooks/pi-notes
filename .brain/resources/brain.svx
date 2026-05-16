@@ -1,0 +1,34 @@
+# BRAIN.md
+
+BRAIN.md is the concise system-level operating layer for pi-notes agents.
+
+## Decision
+
+Use Tiago Forte's PARA as a fundamental organizing principle, but do not import the bloated second-brain ceremony.
+
+pi-notes should organize knowledge by usefulness:
+
+- Projects
+- Areas
+- Resources
+- Archives
+
+The agent asks: “Where will this be useful next?” instead of “What topic bucket does this belong in?”
+
+## Distillation
+
+The long second-brain prompt compresses into a few operating rules:
+
+- capture only what matters
+- organize by actionability
+- refine into atomic linked notes
+- express as code, docs, decisions, UI, plans, or issues
+- avoid hoarding and over-organization
+
+## Product fit
+
+PARA gives pi-notes a practical top-level organizing structure. Roam/Zettelkasten gives it block-level linked thinking. The Pi agent loop makes the system active instead of passive.
+
+The `egghead-roam-research` archive is source evidence for this blend: the export has dense block refs, heavy `process` usage, and direct notes saying PARA is compatible with Shape Up, useful for project-vs-area distinctions, and still a basis while the Second Brain concept holds up. See [[roam-research]].
+
+This should live in `BRAIN.md` for repo humans and also ship as a concise `before_agent_start` system prompt inside the pi-notes extension, so installed pi-notes sessions get the operating model without dragging a giant prompt into context.

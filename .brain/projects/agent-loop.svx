@@ -1,0 +1,72 @@
+---
+status: active
+---
+
+# Browser-to-Session Agent Loop
+
+pi-notes needs the agent loop before the full graph engine, because the product only matters if a browser review page can connect to an active Pi session.
+
+## First connection model
+
+The first working connection is session-declared with a direct SSE/HTTP bridge.
+
+1. On `session_start`, the extension auto-connects the current Pi session.
+2. The extension ensures the local Document Host is reachable at `127.0.0.1:4188`, starting `bun run dev` if needed.
+3. The extension writes `.pi/notes-bridge/session.json` with session file, leaf id, cwd, route, browser URL, and bridge endpoints.
+4. The extension starts a local bridge server on `127.0.0.1:4288`.
+5. The browser reads `/api/session`, opens same-origin `EventSource` to `/api/events` for `.brain` changes, and posts Review Batches to `/api/review-batches`.
+6. The SvelteKit endpoint saves the batch for receipts and forwards it to the extension bridge URL when connected.
+7. The extension sends each Review Batch into the active Pi session with `sendUserMessage(..., { deliverAs: "followUp" })`.
+
+The old inbox file path remains only as a manual fallback/debug affordance. It is not the primary agent loop.
+
+## Why this comes before Graph Engine
+
+Graph state is useful only when the active agent can participate in the loop. The first priority is connecting UI feedback to the current session/context.
+
+Once the connection is real enough, Graph Engine prototypes can use the same loop:
+
+- render graph context
+- select blocks/nodes/edges
+- queue comments or merge requests
+- save Review Batch
+- inject into active Pi session
+- agent edits graph/source
+- browser refreshes
+
+## Current commands
+
+These commands are the minimum agent-loop bridge before direct browser-to-session delivery exists.
+
+- session start/reload — automatically connects the current Pi session, starts the Document Host if missing, and starts the SSE/HTTP bridge.
+- `/notes open` — reconnect the current Pi session, ensure the host/bridge are running, and print the local Brain URL.
+- `/notes connect` — same connection behavior as `/notes open`; kept as an explicit operator command.
+- `/notes status` — report connection, watcher state, latest inbox file, and processed count.
+- `/notes inbox` — inject the latest saved Review Batch into the current Pi session and mark it processed.
+- `/notes watch` — start the SSE/HTTP bridge for an already connected session.
+- `/notes unwatch` — stop the bridge.
+- `pi_notes_latest_batch` — tool form that reads and formats the latest batch without injecting it.
+
+The URL contract always includes `http://127.0.0.1:4188/pi-notes`. A portless URL such as `https://pi-notes.localhost/pi-notes` is preferred when configured, but it is optional and should stay a quiet affordance rather than a blocker.
+
+## Bridge state sketch
+
+The prototype bridge server is intentionally not a full XState actor yet, but it follows the intended finite shape:
+
+```txt
+disconnected
+  └─ /notes connect → connected
+connected
+  └─ browser opens EventSource → connected
+connected
+  ├─ browser POST /review-batches → sending
+  ├─ /notes unwatch → connected
+  └─ missing session.json → disconnected
+sending
+  ├─ sendUserMessage ok → sent → watching
+  └─ send fails → failed
+failed
+  └─ next poll / manual retry → sending
+```
+
+The Document Host owns document-change SSE like the AI Hero sequence-review app. The extension bridge owns session injection. This keeps browser URLs same-origin while still routing feedback to the live Pi session.

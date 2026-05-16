@@ -1,0 +1,208 @@
+# Build Process
+
+Durable setup steps and reproducible commands for rebuilding the current pi-notes scaffold.
+
+## Captured setup
+
+The current scaffold was created as a Pi extension package with local review-site tooling.
+
+1. Created `/Users/joel/Code/joelhooks/pi-notes` as a new git repo.
+2. Added Pi package manifest with extension and skill resources.
+3. Added SvelteKit, mdsvex, Tailwind, Effect, XState, bits-ui/shadcn-svelte-compatible primitives, and Pi peer dependencies.
+4. Added Pi extension scaffold at `extensions/pi-notes/index.ts`:
+   - `/notes` command
+   - `pi_notes_create_review` tool
+   - explicit `session_shutdown` cleanup hook
+5. Added SvelteKit routes:
+   - `/` intro page
+   - `/[product]` namespace page
+6. Added XState bridge lifecycle sketch at `src/lib/server/bridge-machine.ts`.
+7. Added repo-level context docs:
+   - `AGENTS.md`
+   - `.pi/APPEND_SYSTEM.md`
+   - `CONTEXT.md`
+   - `docs/adr/0001-pi-extension-local-review-sites.md`
+8. Added shallow source reference subtrees under `repos/`:
+   - `repos/pi-mono`
+   - `repos/effect`
+   - `repos/keystrok`
+9. Added this Brain knowledge graph to capture durable build/process knowledge.
+10. Added a project-local gremlin capture extension at `.pi/extensions/gremlin/index.ts`.
+11. Symlink-installed the pi-notes extension at `.pi/extensions/pi-notes -> ../../extensions/pi-notes` so the repo can dogfood `/notes` through Pi's project-local extension auto-discovery.
+12. Added `ID.md` and `TOOLS.md` so the extension can inject essential course-like build context into every Pi turn.
+13. Added `/pi-notes` dogfood route behavior that reads `.brain/*.svx` through `src/lib/server/brain-docs.ts` and renders reviewable blocks.
+14. Added `scripts/install-rig.ts` and `bun run rig:install -- <target-repo>` to bootstrap the self-documenting rig into other projects.
+
+## Repro commands
+
+These commands recreate and validate the package shell after files are present.
+
+```bash
+cd /Users/joel/Code/joelhooks
+mkdir -p pi-notes
+cd pi-notes
+git init
+bun install
+bun run check
+bun run brain:check
+```
+
+## Reference subtree setup
+
+The intended source reference shape is shallow source subtrees under `repos/`, without nested `.git` directories:
+
+```bash
+git clone --depth 1 file:///Users/joel/Code/joelhooks/pi-mono repos/pi-mono
+git clone --depth 1 file:///Users/joel/Code/effect-ts/effect repos/effect
+git clone --depth 1 https://github.com/KunalTanwar/keystrok.git repos/keystrok
+rm -rf repos/pi-mono/.git repos/effect/.git repos/keystrok/.git
+```
+
+Record source URLs/commits in `repos/README.md` when refreshing snapshots.
+
+## Validation
+
+Current validation:
+
+```bash
+bun run check
+```
+
+Expected: `svelte-check found 0 errors and 0 warnings`.
+
+Run `bun run brain:check` after changing `.brain/`.
+
+## Rig installer
+
+Install the gremlin/Brain rig into another project:
+
+```bash
+bun run rig:install -- /Users/joel/Code/joelhooks/cascadia-2026
+bun run rig:install -- /Users/joel/Code/badass-courses/aihero-support
+```
+
+The installer is idempotent and should create missing files instead of overwriting project context.
+
+## Gremlin capture setup
+
+The gremlin extension makes pi-notes behave like a course build. It injects `ID.md` and `TOOLS.md`, tracks a phase, exposes `pi_notes_capture`, and can run `course_brain_check`.
+
+Use it to capture durable build knowledge while working, then fold repeated captures into focused Brain topic files.
+
+## Captured build notes
+
+- **code-change / Review Surface UI** (research, 2026-05-16T20:38:00.067Z): Made block selection optional for queuing feedback, treating selection as context rather than a requirement, and tightened the note reading layout with less padding and a wider 960px document card.
+  - Files: src/routes/[product]/+page.svelte and copied to src/routes/[product]/[...entry]/+page.svelte. Whole-note feedback now queues with blockKind `note` and currentText explaining no block was selected. Browser smoke on /notes/para-refactor: queue enabled with comment and no selection, card measured 930px in current viewport, email-body padding 8/14/14. Checks pass.
+
+- **code-change / PARA Brain Refactor** (research, 2026-05-16T20:35:56.825Z): Created `.brain/para-refactor.svx` as a reviewable Brain page that classifies current entries into proposed Projects, Areas, Resources, and Archives before moving files.
+  - Route: /notes/para-refactor. This lets browser Review Batches comment on the classification plan before any filesystem moves. Checks: bun run brain:check, bun run check.
+
+- **code-change / PARA Brain Routes** (research, 2026-05-16T20:30:54.943Z): Brain entries now support PARA-style organization and each entry remains a route: flat `.brain/*.svx` defaults to Projects, while `.brain/projects|areas|resources|archives/**/*.svx` maps into PARA sections and route paths like `/notes/resources/foo`.
+  - Also reduced Review Surface whitespace and made the extension load BRAIN.md directly for before_agent_start instead of a hand-copied constant. Files: BRAIN.md, .pi/APPEND_SYSTEM.md, extensions/pi-notes/index.ts, src/lib/server/brain-docs.ts, src/routes/[product]/+page.svelte, src/routes/[product]/[...entry]/+page.server.ts, src/routes/[product]/[...entry]/+page.svelte. Checks: bun run check, bunx tsc --noEmit --pretty false, bun run brain:check.
+
+- **code-change / Brain Entry Routes** (research, 2026-05-16T20:26:54.870Z): Changed the dogfood Brain review route from `/pi-notes` to cleaner `/notes`, with `/pi-notes` redirecting to `/notes`; individual Brain entries live at `/notes/{entry}`.
+  - Files: src/routes/[product]/+page.server.ts, src/routes/[product]/[entry]/+page.server.ts, extensions/pi-notes/index.ts. Browser smoke: /notes lists entry cards linking to /notes/agent-loop; /pi-notes redirects to /notes. Checks: bun run check, bunx tsc --noEmit --pretty false, bun run brain:check.
+
+- **code-change / Rendered Brain Review** (research, 2026-05-16T20:22:39.638Z): Changed Brain review blocks from raw markdown-ish labels into rendered reading HTML: headings lose `#`, lists become lists, code fences become code blocks, and paragraph/list/kind labels are hidden from the human reading surface.
+  - Files: src/lib/server/brain-docs.ts, src/routes/[product]/+page.svelte. Internal block ids/kinds/text remain in Review Batch payloads for precise agent edits. Checks: bun run check, bunx tsc --noEmit --pretty false, bun run brain:check. Browser smoke showed first block rendered as <h1>Browser-to-Session Agent Loop</h1>.
+
+- **code-change / Review Surface UI** (research, 2026-05-16T20:20:44.727Z): Removed noisy block ids and hashes from visible Review Surface block cards; human-facing cards now show block kind plus content, while selected items summarize the selected text instead of internal ids.
+  - File: src/routes/[product]/+page.svelte. Internal ids remain in payloads for precise Review Batch routing; they are just hidden from the reading surface. Checks: bun run check, bun run brain:check.
+
+- **code-change / Review Surface UI** (research, 2026-05-16T20:20:05.617Z): Ported the tighter AI Hero sequence-review visual language into the pi-notes Review Surface: compact topbar, centered document cards, email-like block stack, sticky action lane, selected/queued sections, and clearer delivery receipt copy.
+  - Source inspiration: /Users/joel/Code/badass-courses/aihero-support/tools/sequence-review-app/src/styles.css. File changed: src/routes/[product]/+page.svelte. Validation: bun run check, bunx tsc --noEmit --pretty false, bun run brain:check. Browser smoke confirmed Queue enables after selection+comment and queued feedback appears in the action lane.
+
+- **code-change / Bridge Roundtrip Observability** (research, 2026-05-16T20:10:12.950Z): Implemented the first observability slice: browser-created batchId, Document Host Trace Log events, batchId-named inbox receipts, explicit saved_forward_failed semantics, UI delivery/failure copy, Pi Bridge FIFO send queue, bridge trace events, and receipt-required injected prompt.
+  - Files: extensions/pi-notes/index.ts, src/routes/api/review-batches/+server.ts, src/routes/[product]/+page.svelte, CONTEXT.md, .brain/build-process.svx. Validation: bun run check, bunx tsc --noEmit --pretty false, bun run brain:check.
+
+- **decision / Bridge Roundtrip Slice** (research, 2026-05-16T20:04:47.843Z): First implementation slice is observability and success semantics before module extraction: batchId, Trace Log, explicit forward failure, bridge trace events, receipt-required prompt, and clear UI states.
+  - Do not extract PiBridgeRuntime first; tracing the existing live loop makes the later deepening safer and testable.
+
+- **decision / Pi Bridge Send Queue** (research, 2026-05-16T20:04:19.950Z): PiBridgeRuntime should enqueue Review Batches FIFO and send one at a time, logging enqueue/start/success/failure for each batchId.
+  - Dropping active sends loses user intent; parallel sendUserMessage risks scrambled Spawned Session turns.
+
+- **decision / Review Batch Inbox** (research, 2026-05-16T20:04:07.193Z): .pi/notes-inbox remains a durable ingress receipt for every Review Batch POST, but it is not proof of delivery to the Spawned Session.
+  - Every POST writes .pi/notes-inbox/{batchId}.json before forwarding. Delivery and outcome are represented by Trace Log events and Review Receipts, not by inbox existence.
+
+- **decision / Forward Failure Semantics** (research, 2026-05-16T20:03:45.216Z): When Document Host saves a Review Batch but Pi Bridge forwarding fails, the HTTP response should be `ok:false` with status `saved_forward_failed`, batchId, saved path, and error.
+  - The UI must say saved locally but not delivered. This preserves the fallback receipt while preventing fake success from `mode: saved-only`.
+
+- **decision / Review Receipt Writer** (research, 2026-05-16T20:03:09.879Z): Only the Spawned Session/agent writes Review Receipt files after handling a Review Batch; Document Host and Pi Bridge write delivery trace events only.
+  - This avoids fake success where HTTP 200 or sendUserMessage success is mistaken for handled Brain changes. Receipt path remains .pi/notes-bridge/receipts/{batchId}.json.
+
+- **decision / Review Receipt** (research, 2026-05-16T20:02:40.316Z): The minimal reliable round trip requires the Spawned Session to write an outcome receipt for each handled Review Batch, not just receive a bridge delivery event.
+  - Receipt shape: batchId, status handled/partial/unhandled, handled/partial/unhandled comment ids, changedFiles, notes, createdAt. Proposed path: .pi/notes-bridge/receipts/{batchId}.json.
+
+- **decision / Review Batch ID** (research, 2026-05-16T20:02:12.321Z): Review Batch ids are generated in the browser at user-action time and preserved across Document Host, Pi Bridge, Trace Log, and Review Receipt.
+  - Document Host may backfill missing batchId for old clients/direct tests and should log that as `batch.id.backfilled`. Content hashes are not ids because repeated comments must remain distinct events.
+
+- **decision / Trace Log** (research, 2026-05-16T20:01:26.625Z): pi-notes will persist high-cardinality Review Batch events in `.pi/notes-bridge/events.jsonl` and mirror major bridge events into Pi append entries.
+  - This gives reliable post-reload observability for browser → Document Host → Pi Bridge → Spawned Session without depending only on live Pi session history.
+
+- **decision / Batch Trace** (research, 2026-05-16T20:00:42.928Z): Review Batch identity is a stable batchId carried across browser, Document Host, Pi Bridge, Spawned Session, logs, saved inbox files, and Review Receipts.
+  - Updated CONTEXT.md with Batch Trace. File names remain evidence, not identity.
+
+- **concept / Review Receipt** (research, 2026-05-16T19:59:21.250Z): A reliable pi-notes round trip means Review Batch delivery plus a structured handled/partial/unhandled Review Receipt, not merely a browser POST succeeding.
+  - Updated CONTEXT.md with Review Batch and Review Receipt language. This frames observability around delivery and source-outcome receipts for the Spawned Session loop.
+
+- **gotcha / Fetch Bad Port** (research, 2026-05-16T19:51:06.185Z): Node/undici follows Fetch's bad-port list, so SvelteKit `fetch('http://127.0.0.1:4190/...')` fails with `bad port` even though curl can reach it.
+  - Changed the pi-notes extension bridge from port 4190 to 4288. Browser/SvelteKit same-origin forwarding can now use fetch to reach the extension bridge after Pi extension reload.
+
+- **code-change / Pi Source Reference** (research, 2026-05-16T19:48:11.712Z): Added `repos/pi` as a shallow canonical snapshot of `https://github.com/earendil-works/pi` for checking Pi extension/session/RPC capabilities before implementing bridge behavior.
+  - Updated repos/README.md, AGENTS.md, .pi/APPEND_SYSTEM.md, and .brain/references.svx. Removed nested repos/pi/.git so it remains a source subtree, not a nested runtime dependency.
+
+- **gotcha / Document Host Lifecycle** (research, 2026-05-16T19:42:27.774Z): Killing the spawned Document Host on Pi session shutdown makes reloads leave a connected bridge pointing at a dead 127.0.0.1:4188 server.
+  - Fix: spawn `bun run dev` detached with logs/PID under `.pi/notes-bridge/`, keep it alive across extension reload/session_shutdown, and only stop the SSE bridge on session shutdown. File: extensions/pi-notes/index.ts.
+
+- **insight / AI Hero Sequence Review Bridge** (research, 2026-05-16T19:40:25.783Z): AI Hero sequence-review keeps browser traffic same-origin: Vite owns /doc, /events, and /batch; /batch saves a receipt then forwards to an optional Pi bridge URL from env.
+  - Source: /Users/joel/Code/badass-courses/aihero-support/tools/sequence-review-app/vite.config.ts and src/main.tsx. pi-notes adopted this split: SvelteKit owns /api/events and /api/review-batches, then forwards to the extension bridge from session.json.
+
+- **code-change / Auto Brain Connection** (research, 2026-05-16T19:35:02.856Z): pi-notes now auto-connects the current session on session_start, ensures the local Document Host is running, and starts the SSE bridge without requiring `/notes open` after reload.
+  - extensions/pi-notes/index.ts: session_start calls connectCurrentSession, which starts bun run dev if 127.0.0.1:4188/pi-notes is unreachable and starts the 127.0.0.1:4190 SSE/HTTP bridge. session_shutdown cleans up spawned host and bridge.
+
+- **code-change / Brain Migration** (build, 2026-05-16): Migrated the project graph into `.brain/*.svx`, removed the old graph directory, switched the loader to `.brain`, and replaced validation with `bun run brain:check` while deferring wikilink checks.
+  - Evidence: `.brain/` contains 15 `.svx` files, the old directory is absent, `src/lib/server/brain-docs.ts` loads `.brain`, and `bun run brain:check` passes.
+
+- **decision / Brain Migration** (research, 2026-05-16T19:18:33.429Z): Brain should be migrated into native ./brain .svx pages and then removed; project instructions should stop treating Brain as active memory.
+  - Resolved in grill session. CONTEXT.md now defines Brain as the native .svx project knowledgebase replacing Brain. First slice should include instruction updates so future agents forget Brain as source of truth.
+
+- **decision / Brain Source Format** (research, 2026-05-16T19:17:41.992Z): Native Brain pages should be authored as mdsvex .svx files only; .md is compatibility/import input, not the native ./brain source format.
+  - Decision from grill session for Brain replacement. Generated graph/index artifacts remain outside ./brain in .pi/brain-cache or .pi/notes-cache.
+
+- **next-step / Brain Directory** (research, 2026-05-16T19:15:31.500Z): Prepared and copied a shaping handoff prompt for replacing Brain with native ./brain served by SvelteKit and connected to active Pi sessions.
+  - Handoff prompt saved at /tmp/pi-notes-brain-handoff.md and copied to clipboard. Async research job 4175d765-ddb6-4dd1-b905-fe964e5ed2ff is running to map full Tiago/PARA/Second Brain extent in the Roam archive.
+
+- **code-change / Roam Research Panda Skill** (research, 2026-05-16T19:07:28.560Z): Updated the roam-research-panda skill with Roam Datascript/Datalog query model, core datom attributes, query shapes, and the gist reference; Python regex is now documented as fallback only.
+  - Source gist: https://gist.github.com/2b3pro/231e4f230ed41e3f52e8a89ebf49848b. Also updated.brain/roam-research.svx to prefer Datascript/Datalog via db-from-reader.
+
+- **insight / Roam Hierarchy Retrieval** (research, 2026-05-16T19:01:05.938Z): For Roam, the useful hierarchy is backlink-centric: page roots for `[[PARA]]` and `[[Shape Up]]` were empty, but incoming reference blocks had descendants containing the real structured context.
+  - Extracted 4 PARA incoming ref hierarchies and 9 Shape Up incoming ref hierarchies from panda EDN. Saved local artifact .pi/para-shapeup-ref-context.md.
+
+- **code-change / Roam Research Panda Skill** (research, 2026-05-16T18:59:57.580Z): Added a user-level read-only Pi skill for querying Joel's Roam archive on panda with hierarchy-first page/root context retrieval.
+  - Created ~/.pi/agent/skills/roam-research-panda/SKILL.md and report roam-research-panda-skill-report.md. Emphasizes descendant traversal for `[[PARA]]` and `[[Shape Up]]`, Python EDN scans, source immutability, and evidence output contract.
+
+- **gotcha / Roam Hierarchy Retrieval** (research, 2026-05-16T18:58:46.982Z): Roam pages such as `[[PARA]]` and `[[Shape Up]]` shape hierarchies; querying single matching block blurbs loses the real context, so agents need descendant expansion below page/root blocks.
+  - Updated .brain/roam-research.svx with the hierarchy retrieval rule: title/root lookup → children/parents traversal → ordered descendant block strings with eids/uids/depth/refs receipts.
+
+- **insight / Roam Research Source** (research, 2026-05-16T18:55:37.261Z): Direct EDN search found source-backed second brain/PARA evidence: 18 'second brain' matches, 20 exact PARA/P.A.R.A. matches, 17 Progressive Summarization matches, 6 Tiago Forte matches, and notes saying PARA is compatible with Shape Up and still a basis.
+  - Updated .brain/roam-research.svx and .brain/brain.svx. Zettelkasten and CODE framework had 0 direct block-string matches in the Roam export.
+
+- **insight / Roam Research Source** (research, 2026-05-16T18:52:48.421Z): panda ~/Code/joelhooks/egghead-roam-research contains source-backed evidence for pi-notes graph/process/query-index design: 207,567 block strings, 60,993 reference edges, 15,687 unique targets, and dense process-tag usage.
+  - Added .brain/roam-research.svx and linked it from .brain/index.svx,.brain/graph-model.svx, and .brain/brain.svx.
+
+- **insight / Roam Research Source** (research, 2026-05-16T18:51:16.476Z): Joel identified egghead-roam-research as a high-value source for how he thinks about Roam, process, PARA, and second brain concepts; it should inform pi-notes BRAIN.md and graph-model shaping.
+  - Attempted panda path /Volumes/joel/Code/joelhooks/egghead-roam-research, but panda reported no such directory. Need locate actual path or mount.
+
+- **decision / BRAIN.md** (research, 2026-05-16T18:49:38.741Z): pi-notes now ships its concise PARA + atomic linked notes operating layer through the extension's before_agent_start system prompt, not only project-local APPEND_SYSTEM.md.
+  - Embedded PI_NOTES_BRAIN_SYSTEM in extensions/pi-notes/index.ts; updated .pi/APPEND_SYSTEM.md and .brain/brain.svx to reflect extension-shipped behavior.
+
+- **code-change / Extension Installation** (research, 2026-05-16T18:46:07.217Z): Symlink-installed pi-notes into .pi/extensions/pi-notes so this repo can dogfood the /notes command through project-local extension discovery.
+  - Created .pi/extensions/pi-notes -> ../../extensions/pi-notes. Pi docs auto-discover .pi/extensions/*/index.ts on reload.
+
+- **code-change / BridgeInboxWatcher** (research, 2026-05-16T18:41:20.847Z): Added prototype extension-owned inbox watcher: /notes watch polls saved Review Batches, sends one at a time with sendUserMessage, and marks processed files in .pi/notes-bridge/processed.json.
+  - Files: extensions/pi-notes/index.ts,.brain/agent-loop.svx,.brain/review.svx. State sketch: disconnected → connected → watching → sending → sent/failed.
+
+Durable captures from the gremlin extension. Periodically fold these into focused Brain topic files.
+
+- **code-change / Review Batch** (research, 2026-05-16T18:36:44.201Z): Handled notes inbox comment c1 by clarifying the architecture document H1 from generic 'Architecture' to 'pi-notes Architecture'.
+  - Updated .brain/architecture.svx in response to a pi-notes dogfood review batch.
