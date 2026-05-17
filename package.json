@@ -13,7 +13,15 @@
   "bugs": {
     "url": "https://github.com/joelhooks/pi-notes/issues"
   },
-  "keywords": ["pi-package", "pi-extension", "brain", "local-notes", "review-documents", "mdsvex", "sveltekit"],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "brain",
+    "local-notes",
+    "review-documents",
+    "mdsvex",
+    "sveltekit"
+  ],
   "bin": {
     "pi-notes": "./bin/pi-notes.ts"
   },
@@ -30,7 +38,9 @@
     "docs/diagrams/",
     "svelte.config.js",
     "vite.config.ts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "!examples/**/node_modules/",
+    "!examples/**/node_modules/**"
   ],
   "scripts": {
     "dev": "vite dev --host 127.0.0.1",
@@ -45,8 +55,12 @@
     "test": "vitest run"
   },
   "pi": {
-    "extensions": ["./extensions/pi-notes/index.ts"],
-    "skills": ["./skills"]
+    "extensions": [
+      "./extensions/pi-notes/index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.1.4",
