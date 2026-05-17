@@ -33,6 +33,9 @@
   let sending = $state(false);
   let bridgeEvent = $state("not connected");
   let agentActivity = $state<Array<{ id: string; label: string; detail: string; ts: number; kind: string }>>([]);
+  let supportReviewStatus = $state<{ run?: { reviewRunId: string; status?: string; cards: number } | null; counts?: Record<string, number> } | null>(null);
+  let sendingApprovedBatch = $state(false);
+  let approvedBatchReceipt = $state("");
   let sessionState = $state<{
     connected: boolean;
     session?: {
@@ -56,6 +59,7 @@
   const canSend = $derived((queue.length > 0 || comment.trim().length > 0) && !sending);
   const bridgeState = $derived(sessionState.bridge?.state ?? "idle");
   const activeAgentWork = $derived(agentActivity.some((item) => ["pi_bridge.send.started", "pi_bridge.received", "pi_bridge.enqueue"].includes(item.kind)) || bridgeState === "sending");
+  const currentSupportRunId = $derived(documents[0]?.sourcePath.match(/(sr_[^/.]+)\.svx$/)?.[1] ?? null);
 
   function pushActivity(kind: string, detail: string, data: unknown = {}) {
     const ts = Date.now();
@@ -135,13 +139,41 @@
     sessionState = await response.json();
   }
 
+  async function refreshSupportReviewStatus() {
+    const response = await fetch(`/api/brain/support-review-status${currentSupportRunId ? `?runId=${encodeURIComponent(currentSupportRunId)}` : ""}`);
+    const payload = await response.json();
+    if (payload.ok) supportReviewStatus = payload;
+  }
+
+  async function sendApprovedBatch() {
+    if (!currentSupportRunId || sendingApprovedBatch) return;
+    sendingApprovedBatch = true;
+    approvedBatchReceipt = "Queueing approved batch...";
+    try {
+      const response = await fetch("/api/brain/support-review-batch-send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ runId: currentSupportRunId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error ?? "failed to queue batch");
+      approvedBatchReceipt = `Queued ${payload.queued} approved replies to Pi.`;
+      void refreshSupportReviewStatus();
+    } catch (error) {
+      approvedBatchReceipt = error instanceof Error ? error.message : "failed to queue batch";
+    } finally {
+      sendingApprovedBatch = false;
+    }
+  }
+
   $effect(() => {
     markRenderedSelection();
   });
 
   $effect(() => {
     void refreshSession();
-    const interval = setInterval(() => void refreshSession(), 3000);
+    void refreshSupportReviewStatus();
+    const interval = setInterval(() => { void refreshSession(); void refreshSupportReviewStatus(); }, 3000);
     return () => clearInterval(interval);
   });
 
@@ -289,6 +321,24 @@
         <span class="lane-status {bridgeState === 'sending' ? 'waiting' : ''}">{sending ? "saving" : bridgeState}</span>
       </div>
 
+      {#if supportReviewStatus?.run}
+        <section class="lane-section support-review-status">
+          <p class="section-label"><span>◆</span> Support sweep <em>{supportReviewStatus.run.status}</em></p>
+          <p><strong>{supportReviewStatus.run.cards}</strong> cards · <code>{supportReviewStatus.run.reviewRunId}</code></p>
+          <div class="status-grid">
+            <span><strong>{supportReviewStatus.counts?.replyDraftsReady ?? 0}</strong><em>drafts</em></span>
+            <span><strong>{supportReviewStatus.counts?.noReplyReady ?? 0}</strong><em>no-reply</em></span>
+            <span><strong>{supportReviewStatus.counts?.pending ?? 0}</strong><em>pending</em></span>
+            <span><strong>{supportReviewStatus.counts?.approved ?? 0}</strong><em>approved</em></span>
+            <span><strong>{supportReviewStatus.counts?.feedbackSent ?? 0}</strong><em>feedback</em></span>
+            <span><strong>{supportReviewStatus.counts?.sendQueued ?? 0}</strong><em>send queued</em></span>
+            <span><strong>{supportReviewStatus.counts?.archiveQueued ?? 0}</strong><em>archive queued</em></span>
+          </div>
+          <button class="batch-send" type="button" onclick={sendApprovedBatch} disabled={sendingApprovedBatch || !supportReviewStatus.counts?.approved}> {sendingApprovedBatch ? "Queueing..." : "Send approved batch"}</button>
+          {#if approvedBatchReceipt}<p class="send-receipt">{approvedBatchReceipt}</p>{/if}
+        </section>
+      {/if}
+
       <section class="lane-section roundtrip agent-work">
         <p class="section-label"><span>●</span> Agent loop <em>{activeAgentWork ? "running" : "live"}</em></p>
         <p><strong>Session</strong> {sessionState.connected ? "connected" : "not connected"}</p>
@@ -419,6 +469,14 @@
   .lane-status { border: 1px solid #d6d6d3; border-radius: 999px; padding: 3px 7px; color: #5d666d; background: #fff; font-size: 11px; letter-spacing: .02em; }
   .lane-status.waiting { color: #92400e; background: #fff8e8; border-color: #e8d6a3; }
   .lane-section { border-top: 1px solid #e4e4e0; margin-top: 14px; padding-top: 12px; }
+  .support-review-status { background: #fff; border: 1px solid #e4e4e0; border-radius: 12px; padding: 10px; }
+  .support-review-status p { margin: 0 0 8px; color: #5d666d; overflow-wrap: anywhere; }
+  .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .status-grid span { border: 1px solid #eeeeeb; border-radius: 10px; background: #fafafa; padding: 7px; display: grid; gap: 2px; }
+  .status-grid strong { color: #24292f; font-size: 16px; line-height: 1; }
+  .status-grid em { color: #6b7280; font-size: 11px; font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
+  .batch-send { width: 100%; margin-top: 8px; border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 9px 10px; font: inherit; font-weight: 900; cursor: pointer; }
+  .batch-send:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
   .active-section { border-top-color: #cfd4dc; }
   .section-label { display: flex; align-items: center; gap: 7px; color: #4b5563; font-weight: 650; font-size: 12px; letter-spacing: .02em; margin: 0 0 8px; }
   .section-label span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: #24292f; color: #fff; font-size: 11px; }

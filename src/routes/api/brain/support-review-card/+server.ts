@@ -54,11 +54,12 @@ function bridgeReviewBatchesUrl() {
   return status.reviewBatchesUrl ?? (status.bridgeUrl ? `${status.bridgeUrl.replace(/\/$/, "")}/review-batches` : null);
 }
 
-async function sendPiDraftBatch(body: { cardId: string; feedback: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string }) {
+async function sendPiDraftBatch(body: { cardId: string; feedback: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string; approvedDraftHtml?: string }) {
   const url = bridgeReviewBatchesUrl();
   if (!url) return { ok: false, status: "bridge_unavailable" };
+  const isSend = body.verdict === "send_approved" || body.verdict === "send_approved_archive";
   const batch = {
-    type: body.verdict === "generate" ? "support-review-generate-draft" : "support-review-rewrite",
+    type: isSend ? "support-review-send-approved" : body.verdict === "generate" ? "support-review-generate-draft" : "support-review-rewrite",
     product: "aihero",
     documentId: body.cardId,
     comments: [
@@ -71,15 +72,19 @@ async function sendPiDraftBatch(body: { cardId: string; feedback: string; verdic
       },
     ],
     expectedAgentAction: [
-      "Use a real Pi agent turn from /Users/joel/Code/badass-courses/aihero-support to generate or rewrite this SupportReplyCard draft.",
+      isSend
+        ? "Use /skill:aih-triage and delegate to aih-approved-reply-sender if available. Send the exact approvedDraftHtml for this SupportReplyCard only, as Joel/current operator, never as Matt."
+        : "Use a real Pi agent turn from /Users/joel/Code/badass-courses/aihero-support to generate or rewrite this SupportReplyCard draft.",
       "Do not use deterministic templates, if/else routing, canned reply stubs, or generic LLM copy.",
       "Follow /skill:aih-support-voice and /skill:joel-writing-style as light support voice.",
       "Before drafting, recall AI Hero support memory, inspect the card data, use the full Front thread context present in the run, perform/verify the read-only Kit subscriber lookup, and search data/reference-corpus/reference-corpus.sqlite for matching public resources.",
       "Write 1 to 4 short HTML <p> paragraphs in current operator voice, not Matt's voice, no signature, no em dashes, no consultant phrasing, no support slop.",
-      "Do not send, queue, archive, tag, assign, write Kit, write Contact State, or mutate any customer-visible system.",
+      isSend
+        ? (body.verdict === "send_approved_archive" ? "Customer-visible action is explicitly approved for this card: send exact approvedDraftHtml, then archive only this Front conversation after successful send. Do not tag, assign, write Kit, write Contact State, or alter other conversations." : "Customer-visible action is explicitly approved for this card: send exact approvedDraftHtml only. Do not archive, tag, assign, write Kit, write Contact State, or alter other conversations.")
+        : "Do not send, queue, archive, tag, assign, write Kit, write Contact State, or mutate any customer-visible system.",
       "Update only the matching card in .brain/data/support-review-runs/*.json so the browser refreshes with the revised draft.",
       "Set draftSource to pi_agent_sop, draftVoice to sop_passed only if the SOP was actually followed, add corpusUsed, kitContextSummary, and generationReceipt with exact commands/sources used and generatedAt.",
-      "Keep sendGate blocked and preserve the approval flow for Joel to approve after review.",
+      isSend ? `Approved HTML to send exactly:\n${body.approvedDraftHtml ?? body.currentDraft ?? ""}` : "Keep sendGate blocked and preserve the approval flow for Joel to approve after review.",
       body.conversationId ? `Conversation: ${body.conversationId}` : "",
       body.subject ? `Subject: ${body.subject}` : "",
       body.feedback ? `Joel feedback/request: ${body.feedback}` : "",
@@ -178,7 +183,7 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 export const POST: RequestHandler = async ({ request }) => {
-  const body = await request.json() as { cardId?: string; feedback?: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string };
+  const body = await request.json() as { cardId?: string; feedback?: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string; approvedDraftHtml?: string };
   if (!body.cardId || !body.feedback?.trim()) return json({ ok: false, error: "missing cardId or feedback" }, { status: 400 });
 
   mkdirSync(feedbackDir(), { recursive: true });
@@ -191,7 +196,7 @@ export const POST: RequestHandler = async ({ request }) => {
   };
   await writeFeedbackToLibsql(receipt);
   appendFileSync(join(feedbackDir(), "operator-feedback.jsonl"), `${JSON.stringify(receipt)}\n`, "utf8");
-  const piDraftRequest = body.verdict === "rewrite" || body.verdict === "generate"
+  const piDraftRequest = ["rewrite", "generate", "send_approved", "send_approved_archive"].includes(String(body.verdict))
     ? await sendPiDraftBatch({ ...body, cardId: body.cardId, feedback: body.feedback })
     : null;
   return json({ ok: true, receipt, piDraftRequest, sqlitePath: supportReviewDbPath() });

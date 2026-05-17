@@ -1,0 +1,175 @@
+---
+status: active
+---
+
+# Global Brain Overlay
+
+pi-notes should support a global Brain while preserving local repo notes for launched-agent context.
+
+This shape came from the realization that a globally installed pi-notes package should be useful from any session, but the current implementation treats `process.cwd()` as the only Brain root.
+
+## Problem
+
+Global install works today as a Pi package, but storage is repo-local:
+
+- `BRAIN.md`
+- `.brain/**`
+- `.pi/notes-inbox/**`
+- `.pi/notes-bridge/**`
+
+That means every launched repo gets its own Brain. This is good for local project evidence, but bad for durable cross-project concepts, reusable decisions, and Joel-level memory.
+
+## Requirements
+
+| Req | Requirement | Status |
+| --- | --- | --- |
+| R0 | A globally installed pi-notes should work from any repo/session | Core goal |
+| R1 | There should be one central Brain by default for cross-project concepts, decisions, and reusable notes | Must-have |
+| R2 | Local repo notes must still exist for project-specific/private/session artifacts | Must-have |
+| R3 | The agent must know where a note should land: global vs local | Must-have |
+| R4 | Browser Review Surface should make the active root obvious | Must-have |
+| R5 | Feedback batches should route back to the launched agent/session, regardless of storage root | Must-have |
+| R6 | Avoid leaking private repo content into the global Brain accidentally | Must-have |
+| R7 | Existing `.brain/` repos should keep working without migration | Must-have |
+| R8 | Support “promote this local note to global” with receipts/source refs | Nice-to-have |
+
+## Shape A: global default with local workspace overlay
+
+Use a central Brain plus an optional local overlay from the launched repo.
+
+```txt
+~/.pi-notes/brain/
+  projects/
+  areas/
+  resources/
+  archives/
+  data/
+  components/
+
+<repo>/.brain/
+  projects/
+  areas/
+  resources/
+  archives/
+  data/
+  components/
+```
+
+Rules:
+
+- Global install defaults durable memory to `~/.pi-notes/brain`.
+- If launched inside a repo with `.brain/`, pi-notes serves both roots.
+- `/notes` shows a combined index with root badges.
+- `/notes/global/...` serves central Brain entries.
+- `/notes/local/...` serves launched-repo Brain entries.
+- New captures default to local when they mention current repo/source files.
+- Durable reusable concepts default to global.
+- Review Batches always route to the active Pi session, not to a storage root.
+
+## Shape B: repo-local default with optional global switch
+
+Keep current behavior and add explicit global commands:
+
+```txt
+/notes global
+/notes local
+pi-notes brain check --global
+```
+
+This is safer and smaller, but agents must remember to use global. It does not make central memory the natural default.
+
+## Shape C: single global Brain with local inbox only
+
+```txt
+~/.pi-notes/brain/
+<repo>/.pi/notes-inbox/
+```
+
+This is clean but too risky. It encourages private repo details, customer data, or source-specific notes to leak into global memory.
+
+## Fit check
+
+| Req | Requirement | Status | A | B | C |
+| --- | --- | --- | --- | --- | --- |
+| R0 | A globally installed pi-notes should work from any repo/session | Core goal | ✅ | ✅ | ✅ |
+| R1 | There should be one central Brain by default for cross-project concepts, decisions, and reusable notes | Must-have | ✅ | ❌ | ✅ |
+| R2 | Local repo notes must still exist for project-specific/private/session artifacts | Must-have | ✅ | ✅ | ❌ |
+| R3 | The agent must know where a note should land: global vs local | Must-have | ✅ | ❌ | ❌ |
+| R4 | Browser Review Surface should make the active root obvious | Must-have | ✅ | ✅ | ✅ |
+| R5 | Feedback batches should route back to the launched agent/session, regardless of storage root | Must-have | ✅ | ✅ | ✅ |
+| R6 | Avoid leaking private repo content into the global Brain accidentally | Must-have | ✅ | ✅ | ❌ |
+| R7 | Existing `.brain/` repos should keep working without migration | Must-have | ✅ | ✅ | ❌ |
+| R8 | Support “promote this local note to global” with receipts/source refs | Nice-to-have | ✅ | ✅ | ❌ |
+
+Shape A is selected.
+
+## Breadboard
+
+```txt
+Pi session in /some/repo
+  ↓
+pi-notes extension resolves roots
+  ↓
+BrainRootRegistry
+  ├─ global: ~/.pi-notes/brain
+  └─ local:  /some/repo/.brain if present
+  ↓
+Document Host
+  ├─ /notes                 combined index
+  ├─ /notes/global/...      central Brain
+  └─ /notes/local/...       launched repo Brain
+  ↓
+Review Batch
+  ├─ storageRoot: global | local
+  ├─ sourcePath
+  └─ launchedSessionId
+  ↓
+Pi agent receives feedback turn
+```
+
+## Implementation slices
+
+1. **Root resolver**
+   - Add `resolveBrainRoots()`.
+   - Global root: `PI_NOTES_GLOBAL_ROOT ?? ~/.pi-notes`.
+   - Local root: `process.cwd()`.
+   - Keep existing local behavior as compatibility.
+
+2. **Route model**
+   - Add root scope to entries:
+     - `global:projects/foo`
+     - `local:projects/foo`
+   - Show root badges in `/notes`.
+
+3. **Document Host loading**
+   - Load `.svx` from selected root.
+   - Resolve components and data from the selected root.
+   - Keep data/components separate per root.
+
+4. **Capture tools**
+   - Add `scope: "global" | "local" | "auto"` to capture tools.
+   - Auto rule:
+     - repo file/path mention → local
+     - reusable concept/decision → global
+     - uncertainty → local with a promote hint
+
+5. **Promotion command**
+   - `/notes promote local:projects/foo`
+   - Copy or fold into global with a source receipt:
+     - original repo path
+     - source hash
+     - date
+     - session id if available
+
+6. **Safety**
+   - Never auto-promote code snippets, secrets, customer data, or private repo context.
+   - Global writes should include receipt metadata.
+   - UI badge must make `GLOBAL` vs `LOCAL` obvious.
+
+## Decision
+
+Build the global Brain overlay next. It lets pi-notes become durable personal memory without losing repo-local source evidence.
+
+## Approval
+
+Approved by Joel in-session after reviewing the shaping. Next phase is slicing/implementation planning for Shape A.

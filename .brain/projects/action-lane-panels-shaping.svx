@@ -1,0 +1,218 @@
+---
+status: active
+shaping: true
+---
+
+# Action Lane Panels — Shaping
+
+## Source
+
+> Problem:
+> - A Brain note page can get stuck on "Loading MDSvX document..." forever.
+> - We also want pi-notes to let the local repo inject custom Action Lane panels, not just custom Brain MDSvX components.
+>
+> Goal:
+> Implement project-local Action Lane panel extension points in pi-notes and fix the infinite MDSvX loading state.
+>
+> Desired design:
+> 1. Fix infinite MDSvX loading.
+> 2. Add local Action Lane panel extension point.
+> 3. Move support sweep status out of hardcoded pi-notes page logic.
+> 4. Keep safety: panels must not bypass customer-visible approval gates.
+
+## Problem
+
+pi-notes already supports project-local Brain MDSvX components, but the right sidebar is still mostly pi-notes core code. Product-specific review flows like AI Hero support sweeps need custom status panels, counters, approval controls, and domain-specific actions without editing pi-notes itself.
+
+At the same time, failed dynamic imports can leave the operator staring at `Loading MDSvX document...` forever. That breaks trust in the Document Host exactly where pi-notes should be giving clear receipts.
+
+## Outcome
+
+A project can ship its own Action Lane panels beside its Brain components, and failed Brain document imports always resolve into a useful error state.
+
+## Requirements
+
+| Req | Requirement | Status |
+| --- | --- | --- |
+| R0 | Brain document rendering must never stay stuck on `Loading MDSvX document...` forever | Core goal |
+| R1 | Failed MDSvX dynamic imports must show a clear error card with entry, workspace root, import specifier, and message | Must-have |
+| R2 | Local repos must be able to register Action Lane Svelte panels without editing pi-notes core | Must-have |
+| R3 | Project panels should resolve before pi-notes default panels when names collide | Must-have |
+| R4 | Missing Action Lane panels should render a clear missing-component card, not crash the page | Must-have |
+| R5 | Panels should receive useful context props: `product`, `entryId`, `sourcePath`, `documentTitle`, `workspaceRoot`, and `currentRunId` | Must-have |
+| R6 | Support sweep status should move out of hardcoded page logic into an Action Lane panel | Must-have |
+| R7 | AI Hero support can customize the support status panel locally | Must-have |
+| R8 | Existing block selection and feedback send behavior must keep working | Must-have |
+| R9 | Panels must not bypass customer-visible approval gates | Must-have |
+| R10 | Changed Svelte files should pass Svelte 5 checks and autofixer | Must-have |
+
+## CURRENT: hardcoded page sidebar
+
+| Part | Mechanism | Flag |
+| --- | --- | :---: |
+| CURRENT1 | `BrainDocument.svelte` dynamically imports `/.brain/{entry}.svx` and shows loading until component or error | ⚠️ |
+| CURRENT2 | `+page.svelte` owns the Action Lane markup and feedback queue |  |
+| CURRENT3 | Support sweep status behavior is hardcoded into `+page.svelte` and API routes |  |
+| CURRENT4 | Project-local MDSvX components are discovered via `.brain/components/*.svelte` and pipeline config |  |
+
+## A: Project Action Lane registry
+
+Add a first-class Action Lane registry parallel to Brain component registration.
+
+| Part | Mechanism | Flag |
+| --- | --- | :---: |
+| A1 | Extend Brain pipeline config parsing to include Action Lane panels from `.brain/action-lane.config.ts/js` |  |
+| A2 | Recursively scan `.brain/action-lane/**/*.svelte` for auto-discovered local panels |  |
+| A3 | Add default pi-notes panel registry under `src/lib/brain-action-lane/**` |  |
+| A4 | Merge project panels over defaults by name |  |
+| A5 | Add an `ActionLanePanels.svelte` renderer that dynamically imports configured panel modules |  |
+| A6 | Pass panel props: `product`, `entryId`, `sourcePath`, `documentTitle`, `workspaceRoot`, `currentRunId` |  |
+| A7 | Extract support sweep status into a default `SupportReviewStatusPanel.svelte` |  |
+| A8 | Let AI Hero override `SupportReviewStatusPanel` from `.brain/action-lane/SupportReviewStatusPanel.svelte` |  |
+| A9 | Keep feedback composer and queue in core page until a later slice extracts it |  |
+
+## B: Slot-like local panel outlet only
+
+Expose one generic local Svelte component hook and let each project implement everything.
+
+| Part | Mechanism | Flag |
+| --- | --- | :---: |
+| B1 | Hardcode a single optional `.brain/action-lane/Panel.svelte` import |  |
+| B2 | Render that component above the built-in feedback composer |  |
+| B3 | No named registry, no default panel override system |  |
+
+## C: Keep hardcoded support logic but improve loading errors
+
+Only fix the infinite loading bug and leave Action Lane customization for later.
+
+| Part | Mechanism | Flag |
+| --- | --- | :---: |
+| C1 | Add timeout and failure card to `BrainDocument.svelte` |  |
+| C2 | Keep support sweep status hardcoded in `+page.svelte` |  |
+| C3 | No local Action Lane extension point |  |
+
+## Fit Check
+
+| Req | Requirement | Status | A | B | C |
+| --- | --- | --- | --- | --- | --- |
+| R0 | Brain document rendering must never stay stuck on `Loading MDSvX document...` forever | Core goal | ✅ | ✅ | ✅ |
+| R1 | Failed MDSvX dynamic imports must show a clear error card with entry, workspace root, import specifier, and message | Must-have | ✅ | ✅ | ✅ |
+| R2 | Local repos must be able to register Action Lane Svelte panels without editing pi-notes core | Must-have | ✅ | ✅ | ❌ |
+| R3 | Project panels should resolve before pi-notes default panels when names collide | Must-have | ✅ | ❌ | ❌ |
+| R4 | Missing Action Lane panels should render a clear missing-component card, not crash the page | Must-have | ✅ | ✅ | ❌ |
+| R5 | Panels should receive useful context props: `product`, `entryId`, `sourcePath`, `documentTitle`, `workspaceRoot`, and `currentRunId` | Must-have | ✅ | ✅ | ❌ |
+| R6 | Support sweep status should move out of hardcoded page logic into an Action Lane panel | Must-have | ✅ | ❌ | ❌ |
+| R7 | AI Hero support can customize the support status panel locally | Must-have | ✅ | ❌ | ❌ |
+| R8 | Existing block selection and feedback send behavior must keep working | Must-have | ✅ | ✅ | ✅ |
+| R9 | Panels must not bypass customer-visible approval gates | Must-have | ✅ | ❌ | ✅ |
+| R10 | Changed Svelte files should pass Svelte 5 checks and autofixer | Must-have | ✅ | ✅ | ✅ |
+
+**Notes:**
+
+- B fails R3, R6, R7, and R9 because a single generic outlet makes extension possible but not predictable or safe.
+- C fails the main extension-point requirements.
+
+## Decision
+
+Select **A: Project Action Lane registry**.
+
+It matches the existing `.brain/components` pattern, gives AI Hero support a clean override point, and keeps pi-notes core responsible for the shared feedback lane and safety posture.
+
+## Approval
+
+Approved by Joel in-session after reviewing the shaping. Next phase is slicing/implementation planning for Shape A.
+
+## Breadboard
+
+```txt
+Repo .brain config
+  ├─ .brain/components/**
+  ├─ .brain/action-lane/**
+  └─ .brain/action-lane.config.ts
+       ↓
+brain-pipeline.ts
+  ├─ projectComponentImports()
+  ├─ projectActionLanePanelImports()
+  └─ actionLanePanelsForEntry(entry)
+       ↓
++page.server.ts
+  └─ returns document metadata + panel specs
+       ↓
++page.svelte
+  ├─ BrainDocument
+  ├─ ActionLanePanels
+  └─ feedback composer / queue / send
+       ↓
+Panel Svelte modules
+  ├─ fetch own APIs
+  ├─ show status/counters/actions
+  └─ request explicit sends through existing APIs
+```
+
+## Implementation slices
+
+### Slice 1: Stop infinite loading
+
+- Add explicit load state in `BrainDocument.svelte`.
+- Track `loading`, `loaded`, `failed`, `timed_out`.
+- Add timeout fallback.
+- Error card includes:
+  - `entry`
+  - workspace root
+  - import specifier
+  - error message
+- Keep review-safe fallback blocks when available.
+
+### Slice 2: Action Lane panel registry
+
+- Add `ActionLanePanelConfig` types in `brain-pipeline.ts`.
+- Scan `.brain/action-lane/**/*.svelte`.
+- Parse `.brain/action-lane.config.ts/js` for panel order/entry matching.
+- Merge project panel imports over default panel imports.
+- Add missing panel metadata for clear error cards.
+
+### Slice 3: Panel renderer
+
+- Add `ActionLanePanels.svelte`.
+- Dynamically import panel modules.
+- Render missing/import-failed cards per panel.
+- Pass typed Svelte 5 `$props`.
+- Derive `currentRunId` from `entryId` if it contains `sr_...`.
+
+### Slice 4: Extract support sweep status
+
+- Move hardcoded support sweep status from `+page.svelte` into `SupportReviewStatusPanel.svelte`.
+- Keep `/api/brain/support-review-status?runId=...` as the data source.
+- Keep existing feedback send flow in core.
+
+### Slice 5: AI Hero override
+
+- Add local `.brain/action-lane/SupportReviewStatusPanel.svelte` in AI Hero support if needed.
+- Verify support sweep counts still render on:
+  - `/notes/projects/support-runs/2026-05-17-sr_2026_05_17_1318_dogfood_aih_sweep`
+
+## Validation
+
+Run from pi-notes:
+
+```bash
+cd /Users/joel/Code/joelhooks/pi-notes
+PI_NOTES_WORKSPACE_ROOT=/Users/joel/Code/badass-courses/aihero-support \
+VITE_PI_NOTES_WORKSPACE_ROOT=/Users/joel/Code/badass-courses/aihero-support \
+bun run check
+```
+
+Also run:
+
+```bash
+npx @sveltejs/mcp svelte-autofixer <changed-svelte-files>
+```
+
+Browser checks:
+
+- support sweep page does not hang on `Loading MDSvX document...`
+- failed component import shows clear error card
+- local/custom Action Lane panel renders
+- support sweep status still shows counts
+- existing block selection still works
+- existing feedback send still works
