@@ -9,7 +9,7 @@ It treats pi-notes like a course build:
 - Injects `ID.md` and `TOOLS.md` into every turn.
 - Adds `/phase <research|shape|plan|build|capture|review>`.
 - Adds `pi_notes_capture` for decisions, concepts, gotchas, risks, and next steps.
-- Adds `course_brain_check` to run `bun run brain:check`.
+- Adds `course_brain_check` to run `pi-notes brain check`.
 
 ## Capture rule
 
@@ -30,7 +30,7 @@ Then fold repeated captures into focused `.brain/` topic files. Do not let `.pi/
 Start with:
 
 ```bash
-bun run brain:check
+pi-notes brain check
 ```
 
 Main topics:

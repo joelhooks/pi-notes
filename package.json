@@ -1,10 +1,27 @@
 {
   "name": "pi-notes",
   "version": "0.0.0",
+  "description": "Pi extension for local Brain review pages, data-backed notes, and browser-to-agent feedback batches",
   "type": "module",
-  "keywords": ["pi-package", "pi-extension", "local-notes", "review-documents"],
+  "license": "MIT",
+  "author": "Joel Hooks",
+  "homepage": "https://github.com/joelhooks/pi-notes#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joelhooks/pi-notes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joelhooks/pi-notes/issues"
+  },
+  "keywords": ["pi-package", "pi-extension", "brain", "local-notes", "review-documents", "mdsvex", "sveltekit"],
+  "bin": {
+    "pi-notes": "./bin/pi-notes.ts"
+  },
   "files": [
     "BRAIN.md",
+    "LICENSE",
+    "bin/",
+    "examples/",
     "README.md",
     "extensions/",
     "skills/",
@@ -21,10 +38,10 @@
     "preview": "vite preview --host 127.0.0.1",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "format": "prettier --write .",
-    "brain:check": "bun scripts/check-brain.ts",
-    "rig:install": "bun scripts/install-rig.ts",
-    "notes:inbox": "bun scripts/read-notes-inbox.ts",
-    "diagram:compile": "bun scripts/compile-diagram.ts",
+    "brain:check": "bun bin/pi-notes.ts brain check",
+    "rig:install": "bun bin/pi-notes.ts rig install",
+    "notes:inbox": "bun bin/pi-notes.ts inbox",
+    "diagram:compile": "bun bin/pi-notes.ts diagram compile",
     "test": "vitest run"
   },
   "pi": {
@@ -41,11 +58,14 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "latest",
     "@types/node": "latest",
+    "@types/sanitize-html": "^2.16.1",
     "bits-ui": "latest",
     "clsx": "latest",
     "effect": "latest",
     "lucide-svelte": "latest",
+    "marked": "^18.0.3",
     "mdsvex": "latest",
+    "sanitize-html": "^2.17.4",
     "shiki": "^4.0.2",
     "svelte": "latest",
     "tailwind-merge": "latest",

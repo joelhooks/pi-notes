@@ -1,57 +1,94 @@
 # pi-notes
 
-Local Brain pages for Pi sessions.
+**A Pi extension for local Brain review pages, data-backed notes, and browser-to-agent feedback.**
 
-pi-notes is a Pi extension package that turns a repo-local `.brain/` folder into readable review pages at `/notes`, then lets browser feedback come back into the Pi session that opened the page.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Pi Package](https://img.shields.io/badge/Pi-package-6f42c1.svg?style=for-the-badge)](https://github.com/earendil-works/pi)
 
-It is not trying to be Obsidian in a trench coat. The browser is for reading and marking things up. The agent still owns source edits and leaves receipts.
+pi-notes turns a repo-local `.brain/` folder into readable review pages at `/notes`. The browser is for reading, selecting, and commenting. Pi still owns the source edits and leaves receipts.
 
-## What it gives you
+It is not Obsidian in a trench coat. It is a local review surface wired to the agent session that opened it.
 
-- A Pi extension at `extensions/pi-notes/index.ts`
-- A packaged Pi skill at `skills/pi-notes/SKILL.md`
-- A local SvelteKit Document Host for `/notes`
-- Per-session free ports so multiple repos can run without fixed-port fights
-- Browser → Document Host → Pi session feedback batches
-- First-awakening Brain scaffold for repos that do not have one yet
-- `.brain/**/*.svx` pages organized as Projects, Areas, Resources, Archives
-- Project statuses with `status` frontmatter
-- Inline `.excalidraw` and `.diagram` previews
-- A tiny Diagram DSL compiler for clean DAG-style Excalidraw artifacts
+## Why
+
+Long-running agent work needs better artifacts than chat exhaust.
+
+- `.svx` Brain pages keep project memory small, linked, and reviewable.
+- `.brain/data/**` keeps giant source-derived dumps out of MDSvX.
+- `.brain/components/**` lets projects render rich local review pages without forking pi-notes.
+- Browser feedback comes back to the active Pi session as a Review Batch.
+
+## What You Get
+
+| Piece | What it does |
+| --- | --- |
+| Pi extension | Adds `/notes`, starts the local Document Host, binds feedback to the current Pi session |
+| Document Host | SvelteKit/mdsvex app that renders `.brain/**/*.svx` at `/notes` |
+| Review Surface | Select blocks, write comments, queue feedback, send batches back to Pi |
+| Brain scaffold | Creates `BRAIN.md` and `.brain/` on first awakening when missing |
+| Data-backed notes | Canonical `.brain/data/**` + `.brain/components/**` pattern for large JSON/source material |
+| Diagram compiler | Tiny DAG DSL that compiles to Excalidraw previews |
+| CLI | `pi-notes brain check`, `pi-notes rig install`, `pi-notes inbox`, `pi-notes diagram compile` |
 
 ## Install
 
-Install from the public GitHub repo:
+| Mode | Command |
+| --- | --- |
+| Project install | `pi install -l git:github.com/joelhooks/pi-notes` |
+| Global install | `pi install git:github.com/joelhooks/pi-notes` |
+| One-off run | `pi -e git:github.com/joelhooks/pi-notes` |
+| HTTPS fallback | `pi install https://github.com/joelhooks/pi-notes` |
+| Local checkout | `pi install -l ./pi-notes` |
 
-```bash
-pi install github:joelhooks/pi-notes
-```
-
-That writes a project-local `.pi/settings.json` entry in the current repo. You can also add the GitHub package explicitly:
+Project installs write to the current repo's `.pi/settings.json`. You can also add the package explicitly:
 
 ```json
 {
-  "packages": ["github:joelhooks/pi-notes"]
+  "packages": ["git:github.com/joelhooks/pi-notes"]
 }
 ```
 
-For a quick one-off run without installing:
+After installing or changing package refs, run `/reload` in Pi.
+
+## Commands
+
+### Pi slash commands
+
+| Command | What it does |
+| --- | --- |
+| `/notes` | Open the local notes surface |
+| `/notes status` | Show Document Host and bridge state |
+| `/notes connect` | Repair/rebind the current session bridge |
+| `/notes open` | Open the local notes URL |
+| `/notes inbox` | Read the latest saved Review Batch |
+| `/notes check` | Validate the local Brain scaffold |
+
+Normal use should not require `/notes connect`; the extension auto-connects on session start.
+
+### CLI
 
 ```bash
-pi -e github:joelhooks/pi-notes
+pi-notes brain check
+pi-notes rig install /path/to/repo
+pi-notes inbox
+pi-notes diagram compile docs/diagrams/example.diagram
 ```
 
-If your Pi version does not support the `github:` shorthand yet, use the HTTPS Git URL:
+## How It Works
 
-```bash
-pi install https://github.com/joelhooks/pi-notes.git
+```txt
+Pi session
+  ├─ pi-notes extension
+  │   ├─ initializes BRAIN.md and .brain/ when missing
+  │   ├─ starts the local Document Host on a free loopback port
+  │   └─ starts a session bridge for Review Batches
+  └─ browser at /notes
+      ├─ renders .brain/**/*.svx through mdsvex/Svelte
+      ├─ lazy project components can read .brain/data/**
+      └─ sends selected feedback back to the spawning Pi session
 ```
 
-After install or package changes, run `/reload` in Pi.
-
-## Package shape
-
-`package.json` exposes Pi resources with the `pi` key:
+Package resources are advertised with the `pi` key:
 
 ```json
 {
@@ -62,54 +99,15 @@ After install or package changes, run `/reload` in Pi.
 }
 ```
 
-The package uses an explicit `files` list so npm/git package installs do not ship local session receipts, `.pi/notes-*` scratch state, reference repos, or this repo's own `.brain/` content.
+The package uses an explicit `files` list so npm/git installs do not ship local receipts, `.pi/notes-*` scratch state, reference repos, or this repo's private `.brain/` content.
 
-Check the package payload with:
+Check the payload:
 
 ```bash
 npm pack --dry-run --json
 ```
 
-## First awakening behavior
-
-On `session_start`, pi-notes checks the target repo.
-
-If `BRAIN.md` exists, it uses that as the local operating layer.
-
-If `BRAIN.md` is missing, it writes the bundled default.
-
-If `.brain/` is missing, it creates:
-
-```txt
-.brain/
-.brain/projects/
-.brain/areas/
-.brain/resources/
-.brain/archives/
-.brain/index.svx
-```
-
-It only creates missing files and folders. It does not overwrite existing Brain files.
-
-## Use
-
-Open the notes surface:
-
-```txt
-/notes
-```
-
-Useful commands:
-
-```txt
-/notes status   show Document Host and bridge state
-/notes connect  repair/rebind the current session bridge
-/notes open     open the local notes URL
-```
-
-Normal use should not require `/notes connect`; the extension auto-connects on session start.
-
-## Brain pages
+## Brain Pages
 
 Brain entries are `.svx` files under `.brain/`:
 
@@ -138,22 +136,61 @@ status: active
 # My Project
 ```
 
-Allowed statuses:
+Allowed statuses: `active`, `queued`, `blocked`, `paused`, `done`, `archived`.
+
+## Data-Backed Brain Notes
+
+Use `.brain/data/` for large JSON-backed source material. Use `.brain/components/` for renderers. Keep `.svx` as the narrative shell, not the database.
+
+Canonical shape:
 
 ```txt
-active
-queued
-blocked
-paused
-done
-archived
+.brain/projects/tweet-wall.svx
+.brain/data/tweet-wall.json
+.brain/components/TweetWall.svelte
 ```
 
-The `/notes` index groups entries by PARA and shows project status.
+Tiny `.svx` shell:
 
-## Feedback loop
+```svx
+# Tweet Wall
 
-The browser review flow sends a Review Batch to the same-origin SvelteKit API. The Document Host saves an ingress receipt, forwards the batch to the extension bridge, and the bridge sends it into the current Pi session as a user turn.
+This note reviews a large source-backed tweet archive without inlining it into MDSvX.
+
+<TweetWall />
+```
+
+Project-local components in `.brain/components/**/*.svelte` are auto-imported by tag name. If the page already imports a component, pi-notes does not add a duplicate import. Components can import JSON from `.brain/data/**` with normal relative imports:
+
+```svelte
+<script lang="ts">
+  import records from "../data/tweet-wall.json";
+</script>
+```
+
+Performance rules:
+
+- paginate or virtualize large lists
+- lazy-load images and embeds near scroll/intersection
+- use `preload="none"` for videos
+- render raw source text with Svelte text interpolation like `{record.text}`, never `{@html record.text}`
+- do not paste raw JSON/tweets/media dumps into `.svx`; raw `{}` source text can break MDSvX parsing
+
+The Brain checker accepts:
+
+```txt
+.brain/**/*.svx
+.brain/data/**
+.brain/components/**/*.svelte
+.brain/*.config.ts
+.brain/*.config.js
+```
+
+See `examples/brain-data-backed-note/` and this repo's dogfood page at `.brain/projects/example-data-backed-note.svx`.
+
+## Feedback Loop
+
+The browser sends a Review Batch to the same-origin SvelteKit API. The Document Host saves an ingress receipt, forwards the batch to the extension bridge, and the bridge sends it into the current Pi session as a user turn.
 
 Receipts and traces live under ignored local state:
 
@@ -163,7 +200,7 @@ Receipts and traces live under ignored local state:
 .pi/notes-bridge/receipts/
 ```
 
-A successful browser POST means delivery. A handled batch should also get a session-written receipt.
+A successful browser POST means delivery to Pi. A handled batch should also get a session-written receipt.
 
 ## Diagrams
 
@@ -176,7 +213,7 @@ docs/diagrams/*.diagram
 Compile them to Excalidraw artifacts:
 
 ```bash
-bun run diagram:compile docs/diagrams/pi-notes-feedback-loop.diagram
+pi-notes diagram compile docs/diagrams/pi-notes-feedback-loop.diagram
 ```
 
 Reference either artifact from a Brain page with a fenced single-path block:
@@ -191,18 +228,11 @@ The note renderer previews the existing artifact and shows stale/missing warning
 
 ## Development
 
-Install deps:
-
 ```bash
 bun install
-```
-
-Run checks:
-
-```bash
 bun run check
-bunx tsc --noEmit --pretty false
 bun run brain:check
+bun run build
 npm pack --dry-run --json
 ```
 
@@ -214,8 +244,13 @@ bun run dev
 
 The extension normally starts the host itself with a free `PI_NOTES_PORT`.
 
-## RPC note
+## Limitations
 
-Pi RPC mode is probably the future transport if pi-notes becomes a standalone external client. It gives us `get_state`, `get_messages`, streaming events, queue controls, aborts, and the extension UI protocol.
+- pi-notes is Pi-first. Other harnesses can read the files, but the bridge behavior is Pi-specific.
+- The Document Host is local-only; it is not a public publishing service.
+- Project-local Svelte components execute as local code. Review them like any other repo code.
+- RPC mode may become the future transport, but the current bridge is intentionally in-process so feedback targets the spawning session.
 
-For this slice, the in-process extension bridge is still the right default because it binds directly to the spawning session with `pi.sendUserMessage(...)`.
+## License
+
+MIT

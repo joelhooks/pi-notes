@@ -26,6 +26,7 @@ export default defineConfig({
     host: "127.0.0.1",
     port,
     strictPort: true,
+    allowedHosts: ["dark-wizard.tail7af24.ts.net"],
     fs: {
       allow: [workspaceRoot()],
     },

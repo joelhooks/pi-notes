@@ -2,10 +2,11 @@
   import { tick } from "svelte";
   import type { Component } from "svelte";
 
-  type Props = { entry: string };
+  type FallbackBlock = { id: string; kind: string; text: string; html: string; hash: string };
+  type Props = { entry: string; fallbackBlocks?: FallbackBlock[] };
   type BrainModule = { default: Component };
 
-  let { entry }: Props = $props();
+  let { entry, fallbackBlocks = [] }: Props = $props();
 
   const workspaceRoot = import.meta.env.VITE_PI_NOTES_WORKSPACE_ROOT as string | undefined;
   let component = $state<Component | null>(null);
@@ -56,10 +57,28 @@
 
 <div bind:this={host} class="brain-document">
 {#if error}
-  <section class="brain-render-error">
-    <strong>MDSvX render failed</strong>
-    <code>{error}</code>
-  </section>
+  {#if fallbackBlocks.length > 0}
+    <section class="brain-render-fallback">
+      <strong>MDSvX render failed; showing review-safe fallback.</strong>
+      <code>{error}</code>
+    </section>
+    {#each fallbackBlocks as block (block.id)}
+      <article
+        data-selectable-block="true"
+        data-block-kind={block.kind}
+        data-block-id={`${entry}:${block.id}`}
+        data-selected="false"
+        class:code-block={block.kind === "code"}
+      >
+        {@html block.html}
+      </article>
+    {/each}
+  {:else}
+    <section class="brain-render-error">
+      <strong>MDSvX render failed</strong>
+      <code>{error}</code>
+    </section>
+  {/if}
 {:else if component}
   {@const DocumentComponent = component}
   <DocumentComponent />
@@ -72,12 +91,14 @@
   .brain-document :global([data-selectable-block]) { cursor: pointer; border-radius: 8px; transition: outline-color .12s ease, background-color .12s ease; }
   .brain-document :global([data-selectable-block]:hover) { outline: 2px solid color-mix(in srgb, #2563eb 28%, transparent); outline-offset: 3px; }
   .brain-document :global([data-selectable-block][data-selected="true"]) { outline: 3px solid color-mix(in srgb, #2563eb 52%, transparent); outline-offset: 4px; background: color-mix(in srgb, #2563eb 7%, transparent); }
-  .brain-render-error, .brain-render-loading {
+  .brain-render-error, .brain-render-loading, .brain-render-fallback {
     border: 1px solid #fecaca;
     border-radius: 16px;
     background: #fff1f2;
     color: #991b1b;
     padding: 1rem;
   }
-  .brain-render-error code { display: block; margin-top: .5rem; white-space: pre-wrap; }
+  .brain-render-error code, .brain-render-fallback code { display: block; margin-top: .5rem; white-space: pre-wrap; }
+  .brain-render-fallback { border-color: #fed7aa; background: #fff7ed; color: #9a3412; margin-bottom: 1rem; }
+  article[data-selectable-block] { display: block; margin: 0 0 1rem; }
 </style>

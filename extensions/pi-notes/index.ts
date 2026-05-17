@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { appendFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -63,11 +63,66 @@ function brainSystemPrompt() {
     hasLocalBrain ? "- Local `BRAIN.md` is present and is the active operating layer." : "- No local `BRAIN.md` exists yet; use the bundled pi-notes default operating layer.",
     hasBrainDir ? "- Local `.brain/` exists; use it as the durable project knowledge graph." : "- Local `.brain/` was not present at startup; pi-notes should initialize it automatically on first session start.",
     "- Prefer local Brain entries for durable notes, decisions, diagrams, and review receipts.",
-    "- Local projects may customize Brain rendering with `.brain/components/*.svelte`, `.brain/components.config.ts`, and `.brain/pipeline.config.ts`.",
+    "- Local projects may customize Brain rendering with `.brain/components/**/*.svelte`, `.brain/data/**`, `.brain/components.config.ts`, and `.brain/pipeline.config.ts`.",
     "- Brain `.svx` documents use the real MDSvX/unified pipeline when rendered by the Document Host. Prefer project-local components over standalone prototype pages.",
     "- Component resolution is project override first, pi-notes standard component second, clear missing-component error card third.",
     "- Local `remarkPlugins` and `rehypePlugins` must be explicit and safe. After changing the pipeline, run the pi-notes check and open the affected note in the Document Host.",
   ].join("\n");
+}
+
+function walkFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    return statSync(path).isDirectory() ? walkFiles(path) : [path];
+  });
+}
+
+function isAllowedBrainFile(path: string) {
+  if (path.endsWith(".svx")) return true;
+  if (path.startsWith(".brain/data/")) return true;
+  if (path.startsWith(".brain/components/") && path.endsWith(".svelte")) return true;
+  if (/^\.brain\/[^/]+\.config\.[tj]s$/.test(path)) return true;
+  return false;
+}
+
+function componentPerformanceWarnings(path: string, source: string) {
+  const warnings: string[] = [];
+  if (source.includes("<video") && !/preload\s*=\s*["']none["']/.test(source)) warnings.push(`${path}: data-backed videos should use preload=\"none\"`);
+  if (source.includes("<img") && !/loading\s*=\s*["']lazy["']/.test(source)) warnings.push(`${path}: data-backed images should use loading=\"lazy\"`);
+  if (source.includes("{@html") && /\b(record|item|row|tweet|source|text|body|content)\b/i.test(source)) warnings.push(`${path}: render raw source fields as text, not {@html ...}`);
+  if ((source.includes("../data/") || source.includes(".brain/data")) && source.includes("{#each") && !/\b(page|visible|virtual|slice|limit|offset)\b/i.test(source)) warnings.push(`${path}: large data-backed lists should paginate or virtualize`);
+  return warnings;
+}
+
+function checkLocalBrain(root = process.cwd()) {
+  const brainDir = join(root, ".brain");
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  let pageCount = 0;
+
+  if (!existsSync(brainDir)) {
+    errors.push("missing .brain/ directory");
+  } else {
+    const files = walkFiles(brainDir).map((path) => path.slice(root.length + 1));
+    const svxFiles = files.filter((path) => path.endsWith(".svx"));
+    const invalidFiles = files.filter((path) => !isAllowedBrainFile(path));
+    pageCount = svxFiles.length;
+
+    if (!existsSync(join(brainDir, "index.svx"))) errors.push("missing .brain/index.svx");
+    if (svxFiles.length === 0) errors.push(".brain/ contains no .svx pages");
+    for (const file of invalidFiles) errors.push(`unsupported Brain support file: ${file}`);
+    for (const file of files.filter((path) => path.startsWith(".brain/components/") && path.endsWith(".svelte"))) {
+      warnings.push(...componentPerformanceWarnings(file, readFileSync(join(root, file), "utf8")));
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    pageCount,
+    errors,
+    warnings,
+    text: [`Brain pages: ${pageCount}`, ...warnings.map((warning) => `brain check warning: ${warning}`), errors.length ? errors.map((error) => `brain check error: ${error}`).join("\n") : "brain check passed"].join("\n"),
+  };
 }
 
 function initLocalBrain() {
@@ -638,7 +693,14 @@ export default function piNotes(pi: ExtensionAPI) {
         return;
       }
 
-      ctx.ui.notify("pi-notes: use /notes open, /notes connect, /notes unwatch, /notes inbox, or /notes status", "info");
+      if (subcommand === "check" || (subcommand === "brain" && rest[0] === "check")) {
+        const result = checkLocalBrain();
+        ctx.ui.notify(result.text, result.ok ? "success" : "error");
+        pi.appendEntry("pi-notes-brain-check", { ...result, checkedAt: new Date().toISOString(), cwd: process.cwd() });
+        return;
+      }
+
+      ctx.ui.notify("pi-notes: use /notes open, /notes connect, /notes unwatch, /notes inbox, /notes status, or /notes check", "info");
     },
   });
 
@@ -669,6 +731,22 @@ export default function piNotes(pi: ExtensionAPI) {
           },
         ],
         details: params,
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "pi_notes_brain_check",
+    label: "Check Pi Notes Brain",
+    description: "Validate the local .brain/ graph using the pi-notes extension's bundled checker. Does not require a global pi-notes binary.",
+    parameters: Type.Object({}),
+    async execute() {
+      const result = checkLocalBrain();
+      pi.appendEntry("pi-notes-brain-check", { ...result, checkedAt: new Date().toISOString(), cwd: process.cwd() });
+      return {
+        content: [{ type: "text", text: result.text }],
+        details: result,
+        isError: !result.ok,
       };
     },
   });

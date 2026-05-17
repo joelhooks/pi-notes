@@ -1,0 +1,26 @@
+[
+  {
+    "id": "tweet-001",
+    "author": "pi-notes",
+    "text": "Raw source text can contain braces like {do_not_parse_me} and should still render as text.",
+    "media": {
+      "type": "image",
+      "url": "https://placehold.co/960x540/png?text=lazy+image"
+    }
+  },
+  {
+    "id": "tweet-002",
+    "author": "review-surface",
+    "text": "The .svx page stays small. The component owns paging, media loading, and display.",
+    "media": null
+  },
+  {
+    "id": "tweet-003",
+    "author": "document-host",
+    "text": "Videos should not preload when they are part of a large data-backed wall.",
+    "media": {
+      "type": "video",
+      "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+    }
+  }
+]

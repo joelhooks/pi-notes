@@ -41,7 +41,7 @@ function updatePackageScripts(path: string) {
   const pkg = JSON.parse(current);
   pkg.scripts = pkg.scripts ?? {};
   const before = JSON.stringify(pkg.scripts);
-  pkg.scripts["brain:check"] = pkg.scripts["brain:check"] ?? "bun scripts/check-brain.ts";
+  pkg.scripts["brain:check"] = pkg.scripts["brain:check"] ?? "pi-notes brain check";
   const after = JSON.stringify(pkg.scripts);
   if (before === after) return { path, action: "exists" as const };
   writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`, "utf8");
@@ -58,7 +58,7 @@ This project uses the pi-notes Brain rig for durable agent work capture.
 - Keep source-grounded concepts in focused topic files, not loose chat memory.
 - Use \`ID.md\` and \`TOOLS.md\` as injected project identity and operating tools context.
 - Use \`.pi/extensions/gremlin/index.ts\` for capture helpers when loaded by Pi.
-- Run \`bun run brain:check\` after editing the graph.
+- Run \`pi-notes brain check\` after editing the Brain.
 
 When this project uses local review pages, treat pi-notes as the substrate: Document Host, Document Adapter, Review Surface, Session Bridge, Review Batch, and Event Stream.
 <!-- pi-notes-rig:end -->`;
@@ -85,7 +85,7 @@ Project-local operating tools and conventions.
 Useful commands:
 
 \`\`\`bash
-bun run brain:check
+pi-notes brain check
 \`\`\`
 
 ## pi-notes rig
@@ -141,7 +141,7 @@ Durable build/setup knowledge and validation receipts for ${projectTitle}.
 
 ## Rig bootstrap
 
-Installed the pi-notes Brain rig. Use \`bun run brain:check\` after graph edits.
+Installed the pi-notes Brain rig. Use \`pi-notes brain check\` after graph edits.
 `;
 
 const review = `# Review

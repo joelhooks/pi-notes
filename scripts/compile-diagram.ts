@@ -5,7 +5,7 @@ import { compileDiagramFile } from "../src/lib/server/diagram-compiler";
 
 const sourcePath = process.argv[2];
 if (!sourcePath) {
-  console.error("usage: bun run diagram:compile docs/diagrams/foo.diagram");
+  console.error("usage: pi-notes diagram compile docs/diagrams/foo.diagram");
   process.exit(1);
 }
 

@@ -51,7 +51,7 @@ After code changes, run:
 
 ```bash
 bun run check
-bun run brain:check
+pi-notes brain check
 ```
 
 If tests are added or modified, run targeted tests.

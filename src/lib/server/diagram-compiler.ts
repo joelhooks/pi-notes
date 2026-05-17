@@ -227,15 +227,15 @@ export function artifactStatus(root: string, sourcePath: string) {
   const fullSource = resolve(root, sourcePath);
   const artifactPath = artifactPathForSource(sourcePath);
   const fullArtifact = resolve(root, artifactPath);
-  if (!existsSync(fullSource)) return { status: "missing_source" as const, artifactPath, command: `bun run diagram:compile ${sourcePath}` };
-  if (!existsSync(fullArtifact)) return { status: "missing_artifact" as const, artifactPath, command: `bun run diagram:compile ${sourcePath}` };
+  if (!existsSync(fullSource)) return { status: "missing_source" as const, artifactPath, command: `pi-notes diagram compile ${sourcePath}` };
+  if (!existsSync(fullArtifact)) return { status: "missing_artifact" as const, artifactPath, command: `pi-notes diagram compile ${sourcePath}` };
   const sourceHash = hash(readFileSync(fullSource, "utf8"));
   try {
     const artifact = JSON.parse(readFileSync(fullArtifact, "utf8")) as { appState?: { piNotesDiagram?: DiagramMetadata } };
     const metadata = artifact.appState?.piNotesDiagram;
-    if (metadata?.sourceHash !== sourceHash) return { status: "stale" as const, artifactPath, command: `bun run diagram:compile ${sourcePath}`, metadata };
-    return { status: "fresh" as const, artifactPath, command: `bun run diagram:compile ${sourcePath}`, metadata };
+    if (metadata?.sourceHash !== sourceHash) return { status: "stale" as const, artifactPath, command: `pi-notes diagram compile ${sourcePath}`, metadata };
+    return { status: "fresh" as const, artifactPath, command: `pi-notes diagram compile ${sourcePath}`, metadata };
   } catch {
-    return { status: "invalid_artifact" as const, artifactPath, command: `bun run diagram:compile ${sourcePath}` };
+    return { status: "invalid_artifact" as const, artifactPath, command: `pi-notes diagram compile ${sourcePath}` };
   }
 }

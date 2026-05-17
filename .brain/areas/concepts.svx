@@ -24,6 +24,18 @@ A project-specific module that teaches the Document Host how to load, parse, ren
 
 It may ingest `.mdx`, `.svx`, `.md`, JSON, or database-backed documents.
 
+## Brain Data
+
+Large or structured source material stored under `.brain/data/**` and rendered by project-local Brain components.
+
+Brain Data keeps `.svx` pages small and narrative while letting the Document Host render thousands of source-backed records without feeding raw source text through MDSvX.
+
+## Brain Component
+
+A project-local Svelte renderer under `.brain/components/**/*.svelte`.
+
+Brain Components are auto-imported by tag name in `.svx` pages. They should own pagination, virtualization, lazy media, and safe text rendering for `.brain/data/**` records.
+
 ## Spawned Session
 
 The Pi session that created the review document. The session identity is the default routing target for feedback batches.

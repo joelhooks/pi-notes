@@ -1,0 +1,19 @@
+---
+status: active
+---
+
+# Example Data-Backed Note
+
+This is the canonical pi-notes pattern for large source-derived material.
+
+Keep the `.svx` page small: explain the source, name the review question, and render a component. Do not paste thousands of source records into this file.
+
+<ExampleDataWall />
+
+## Why this shape exists
+
+- `.brain/data/example.json` owns structured source records.
+- `.brain/components/ExampleDataWall.svelte` owns rendering, paging, and lazy media behavior.
+- This `.svx` page stays readable, reviewable, and safe for MDSvX.
+
+Use the same shape for tweet walls, exported support batches, media catalogs, and other source-backed review pages.

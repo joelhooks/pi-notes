@@ -32,6 +32,7 @@
   let receipt = $state("");
   let sending = $state(false);
   let bridgeEvent = $state("not connected");
+  let agentActivity = $state<Array<{ id: string; label: string; detail: string; ts: number; kind: string }>>([]);
   let sessionState = $state<{
     connected: boolean;
     session?: {
@@ -54,6 +55,13 @@
   const canQueue = $derived(comment.trim().length > 0);
   const canSend = $derived((queue.length > 0 || comment.trim().length > 0) && !sending);
   const bridgeState = $derived(sessionState.bridge?.state ?? "idle");
+  const activeAgentWork = $derived(agentActivity.some((item) => ["pi_bridge.send.started", "pi_bridge.received", "pi_bridge.enqueue"].includes(item.kind)) || bridgeState === "sending");
+
+  function pushActivity(kind: string, detail: string, data: unknown = {}) {
+    const ts = Date.now();
+    agentActivity = [{ id: `${kind}-${ts}-${Math.random().toString(16).slice(2)}`, kind, label: kind.replace(/^pi_bridge\./, ""), detail, ts }, ...agentActivity].slice(0, 8);
+    bridgeEvent = `${kind} ${JSON.stringify(data).slice(0, 180)}`;
+  }
 
   function toggleBlock(block: SelectedBlock, event: MouseEvent | KeyboardEvent) {
     const multi = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -84,6 +92,7 @@
 
   function selectRenderedBlock(document: { id: string; sourcePath: string }, event: MouseEvent | KeyboardEvent) {
     const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("button,a,input,textarea,select,label,[data-no-block-select]")) return;
     const block = target?.closest("[data-selectable-block]");
     if (!(block instanceof HTMLElement)) return;
     const text = block.innerText.trim();
@@ -138,9 +147,19 @@
 
   $effect(() => {
     const source = new EventSource("/api/events");
-    source.addEventListener("ready", (event) => (bridgeEvent = `ready ${event.data}`));
+    source.addEventListener("ready", (event) => pushActivity("sse.ready", "Live agent stream connected", event.data));
+    source.addEventListener("bridge", (event) => {
+      pushActivity("bridge.status", "Bridge status changed", event.data);
+      void refreshSession();
+    });
+    source.addEventListener("agent", (event) => {
+      const payload = JSON.parse(event.data) as { event?: { event?: string; data?: { batchId?: string; status?: string; file?: string; error?: string } } };
+      const item = payload.event;
+      pushActivity(item?.event ?? "agent.event", item?.data?.batchId ?? item?.data?.file ?? item?.data?.status ?? item?.data?.error ?? "agent activity", payload);
+      void refreshSession();
+    });
     source.addEventListener("changed", (event) => {
-      bridgeEvent = `changed ${event.data}`;
+      pushActivity("brain.changed", "Review data changed", event.data);
       void refreshSession();
     });
     source.onerror = () => (bridgeEvent = "SSE disconnected");
@@ -205,8 +224,8 @@
     {:else}
       <span class="crumb-title">{entries.length} entries</span>
     {/if}
-    <span class="agent {bridgeState === 'sending' ? 'waiting' : bridgeState === 'sent' ? 'done' : ''}">
-      {bridgeState === "sending" ? "Sending" : bridgeState === "sent" ? "Sent" : sessionState.connected ? "Ready" : "Offline"}
+    <span class="agent {activeAgentWork ? 'waiting' : bridgeState === 'sent' ? 'done' : ''}">
+      {activeAgentWork ? "Agents working" : bridgeState === "sent" ? "Sent" : sessionState.connected ? "Ready" : "Offline"}
     </span>
   </header>
 
@@ -252,7 +271,7 @@
                 if (event.key === "Enter" || event.key === " ") selectRenderedBlock(document, event);
               }}
             >
-              <BrainDocument entry={document.id} />
+              <BrainDocument entry={document.id} fallbackBlocks={document.blocks} />
             </div>
           </article>
         {/each}
@@ -270,11 +289,22 @@
         <span class="lane-status {bridgeState === 'sending' ? 'waiting' : ''}">{sending ? "saving" : bridgeState}</span>
       </div>
 
-      <section class="lane-section roundtrip">
+      <section class="lane-section roundtrip agent-work">
+        <p class="section-label"><span>●</span> Agent loop <em>{activeAgentWork ? "running" : "live"}</em></p>
         <p><strong>Session</strong> {sessionState.connected ? "connected" : "not connected"}</p>
         <p><strong>Bridge</strong> {bridgeState}</p>
         <p title={bridgeEvent}><strong>SSE</strong> {bridgeEvent}</p>
         {#if sessionState.session?.url}<p><code>{sessionState.session.url}</code></p>{/if}
+        <div class="activity-list">
+          {#each agentActivity as item (item.id)}
+            <div class="activity {item.kind.includes('failed') ? 'bad' : item.kind.includes('sent') || item.kind.includes('changed') ? 'good' : ''}">
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </div>
+          {:else}
+            <p class="muted">Waiting for bridge events. Generate with Pi will show here as soon as the batch hits the session.</p>
+          {/each}
+        </div>
       </section>
 
       <section class="lane-section active-section">
@@ -338,10 +368,11 @@
 </main>
 
 <style>
-  :global(body) { margin: 0; font-family: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #24292f; background: #f7f7f5; }
+  :global(html) { max-width: 100%; overflow-x: hidden; }
+  :global(body) { margin: 0; max-width: 100%; overflow-x: hidden; font-family: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #24292f; background: #f7f7f5; }
   :global(*) { box-sizing: border-box; }
   :global(button), :global(textarea) { font: inherit; }
-  main { min-height: 100vh; }
+  main { min-height: 100vh; max-width: 100vw; overflow-x: hidden; }
   .topbar { display: flex; justify-content: space-between; gap: 24px; padding: 16px 26px 8px; background: #f7f7f5; }
   .topbar.compact { justify-content: flex-start; align-items: center; gap: 10px; padding: 8px 18px 4px; color: #6b7280; font-size: 12px; }
   .crumb { color: #3b4652; text-decoration: none; font-weight: 650; }
@@ -354,14 +385,14 @@
   .agent { align-self: start; border: 1px solid #dedbd4; border-radius: 999px; background: #fff; padding: 7px 11px; font-size: 13px; }
   .agent.waiting { background: #fff8e8; border-color: #e8d6a3; }
   .agent.done { background: #f0fdf4; border-color: #bbf7d0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 6px 18px 40px; align-items: start; }
-  .email-stack { display: grid; gap: 10px; justify-items: center; }
-  .kit-email { width: min(100%, 960px); background: #fff; border: 1px solid #e4e4e0; box-shadow: 0 10px 28px rgba(31, 41, 55, .045); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 6px 18px 40px; align-items: start; max-width: 100%; overflow-x: hidden; }
+  .email-stack { display: grid; gap: 10px; justify-items: center; min-width: 0; max-width: 100%; }
+  .kit-email { width: min(100%, 960px); min-width: 0; max-width: 100%; overflow: hidden; background: #fff; border: 1px solid #e4e4e0; box-shadow: 0 10px 28px rgba(31, 41, 55, .045); }
   .email-chrome-block { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border: 0; border-bottom: 1px solid #ececea; background: #fafafa; color: #6b7280; font-size: 13px; line-height: 1.2; white-space: normal; text-align: left; cursor: default; }
-  .block-text { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .block-text { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; flex: 1; }
   .block-text strong { color: #24292f; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 11px; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 999px; }
-  .email-body { padding: 8px 14px 14px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 11px; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 999px; overflow-wrap: anywhere; }
+  .email-body { padding: 8px 14px 14px; min-width: 0; max-width: 100%; overflow-x: hidden; }
   .entry-list { padding: 10px; display: grid; gap: 10px; }
   .para-section { display: grid; gap: 6px; }
   .para-section h2 { margin: 2px 2px 0; color: #6f6b63; font-size: 11px; text-transform: uppercase; letter-spacing: .11em; }
@@ -377,10 +408,10 @@
   .mdsvex-body :global(ul), .mdsvex-body :global(ol) { padding-left: 22px; display: grid; gap: 5px; }
   .mdsvex-body :global(li) { padding-left: 2px; line-height: 1.45; }
   .mdsvex-body :global(code) { border-radius: 5px; padding: 1px 5px; background: #f1f5f9; color: #1f2937; font-size: .92em; }
-  .mdsvex-body :global(pre) { white-space: pre; font-size: 12px; border-radius: 8px; padding: 14px; overflow: auto; max-height: none; line-height: 1.55; background: #fbfbfa; border: 1px solid #eeeeeb; }
+  .mdsvex-body :global(pre) { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; font-size: 12px; border-radius: 8px; padding: 14px; overflow-x: auto; max-height: none; line-height: 1.55; background: #fbfbfa; border: 1px solid #eeeeeb; }
   .mdsvex-body :global(pre code) { background: transparent; color: inherit; padding: 0; }
   .mdsvex-body :global(a) { color: #0f5ec7; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
-  .mdsvex-body :global(table) { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 13px; }
+  .mdsvex-body :global(table) { display: block; width: 100%; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 1rem 0; font-size: 13px; }
   .mdsvex-body :global(th), .mdsvex-body :global(td) { border: 1px solid #e4e4e0; padding: 7px 9px; text-align: left; vertical-align: top; }
   .mdsvex-body :global(th) { background: #fafafa; }
   .sidebar { position: sticky; top: 16px; background: transparent; border-left: 1px solid #e4e4e0; padding: 2px 0 0 16px; max-height: calc(100vh - 32px); overflow: auto; font-size: 13px; }
@@ -407,7 +438,31 @@
   .queued span { color: #6b7280; font-size: 12px; }
   .queued p { margin: 5px 0 0; color: #5d666d; word-break: break-word; }
   .roundtrip p { color: #5d666d; margin: 0 0 6px; line-height: 1.45; overflow-wrap: anywhere; }
+  .agent-work { background: #fff; border: 1px solid #e4e4e0; border-radius: 12px; padding: 10px; }
+  .activity-list { display: grid; gap: 6px; margin-top: 8px; }
+  .activity { border-left: 3px solid #60a5fa; background: #eff6ff; border-radius: 8px; padding: 7px 8px; display: grid; gap: 2px; }
+  .activity.good { border-left-color: #14b8a6; background: #ecfdf5; }
+  .activity.bad { border-left-color: #ef4444; background: #fff1f2; }
+  .activity strong { color: #1f2937; font-size: 12px; }
+  .activity span { color: #5d666d; font-size: 12px; overflow-wrap: anywhere; }
   .send-receipt { margin: 6px 0 0; color: #5d666d; font-size: 12px; overflow-wrap: anywhere; }
   .loading { padding: 24px; }
-  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; border-left: 0; border-top: 1px solid #e4e4e0; padding-left: 0; padding-top: 16px; } }
+  @media (max-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr); } .sidebar { position: static; max-height: none; border-left: 0; border-top: 1px solid #e4e4e0; padding-left: 0; padding-top: 16px; min-width: 0; } }
+  @media (max-width: 640px) {
+    .topbar.compact { padding: 8px 10px 4px; gap: 8px; max-width: 100vw; }
+    .crumb-title { min-width: 0; flex: 1; }
+    .topbar.compact .agent { flex: 0 0 auto; }
+    .layout { padding: 6px 8px 28px; gap: 10px; }
+    .email-body { padding: 8px 10px 12px; }
+    .email-chrome-block { padding: 10px 12px; }
+    .block-text { display: grid; grid-template-columns: 1fr; gap: 4px; }
+    .block-text strong { white-space: normal; }
+    .block-text code { width: fit-content; max-width: 100%; border-radius: 6px; }
+    .mdsvex-body :global(h1) { font-size: 22px; }
+    .mdsvex-body :global(h2) { font-size: 18px; }
+    .mdsvex-body :global(h3) { font-size: 16px; }
+    .mdsvex-body :global(ul), .mdsvex-body :global(ol) { padding-left: 18px; }
+    .actions { flex-wrap: wrap; }
+    .actions button, .primary { white-space: normal; }
+  }
 </style>

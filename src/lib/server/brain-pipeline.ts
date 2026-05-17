@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 
 export type BrainPipelineConfig = {
   components?: Record<string, string>;
@@ -48,25 +48,48 @@ export function projectComponentImports(root = workspaceRoot()): Record<string, 
   const config = loadBrainPipelineConfig(root);
   const configured = Object.fromEntries(Object.entries(config.components ?? {}).map(([name, relativePath]) => [name, toFsImport(root, relativePath)]));
   const componentsDir = join(root, ".brain", "components");
-  const scanned = existsSync(componentsDir)
-    ? Object.fromEntries(readdirSync(componentsDir).filter((file) => file.endsWith(".svelte")).map((file) => [file.replace(/\.svelte$/, ""), `/@fs/${join(componentsDir, file)}`]))
-    : {};
+  const scanned = existsSync(componentsDir) ? Object.fromEntries(listSvelteComponents(componentsDir).map((file) => [componentNameFromPath(componentsDir, file), `/@fs/${file}`])) : {};
   return { ...scanned, ...configured };
+}
+
+function listSvelteComponents(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return listSvelteComponents(path);
+    return entry.isFile() && entry.name.endsWith(".svelte") ? [path] : [];
+  });
+}
+
+function componentNameFromPath(componentsDir: string, path: string) {
+  return relative(componentsDir, path).split(sep).at(-1)!.replace(/\.svelte$/, "");
 }
 
 function toFsImport(root: string, relativePath: string) {
   if (relativePath.startsWith("$lib/") || relativePath.startsWith("/@fs/")) return relativePath;
   const fullPath = resolve(root, ".brain", relativePath);
   const brainRoot = resolve(root, ".brain");
-  if (!fullPath.startsWith(brainRoot)) throw new Error(`Brain component import escapes .brain: ${relativePath}`);
+  if (fullPath !== brainRoot && !fullPath.startsWith(`${brainRoot}${sep}`)) throw new Error(`Brain component import escapes .brain: ${relativePath}`);
   return `/@fs/${fullPath}`;
 }
 
 export function componentImportsForSource(source: string, root = workspaceRoot()) {
   const usedNames = new Set([...source.matchAll(/<([A-Z][A-Za-z0-9_$]*)\b/g)].map((match) => match[1]));
+  const alreadyImported = importedComponentNames(source);
   const project = projectComponentImports(root);
   const imports = { ...defaultBrainComponentImports, ...project };
-  return [...usedNames].filter((name) => imports[name]).map((name) => `import ${name} from ${JSON.stringify(imports[name])};`);
+  return [...usedNames].filter((name) => imports[name] && !alreadyImported.has(name)).map((name) => `import ${name} from ${JSON.stringify(imports[name])};`);
+}
+
+function importedComponentNames(source: string) {
+  const names = new Set<string>();
+  for (const match of source.matchAll(/import\s+([A-Z][A-Za-z0-9_$]*)\s+from\s+["'][^"']+["']/g)) names.add(match[1]!);
+  for (const match of source.matchAll(/import\s+{([^}]+)}\s+from\s+["'][^"']+["']/g)) {
+    for (const part of match[1]!.split(",")) {
+      const name = part.trim().split(/\s+as\s+/).at(-1)?.trim();
+      if (name && /^[A-Z][A-Za-z0-9_$]*$/.test(name)) names.add(name);
+    }
+  }
+  return names;
 }
 
 export function injectBrainComponentImports(source: string, root = workspaceRoot()) {
