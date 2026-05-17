@@ -21,27 +21,33 @@ It is not trying to be Obsidian in a trench coat. The browser is for reading and
 
 ## Install
 
-From this checkout:
+Install from the public GitHub repo:
 
 ```bash
-pi install -l /Users/joel/Code/joelhooks/pi-notes
+pi install github:joelhooks/pi-notes
 ```
 
-That writes a project-local `.pi/settings.json` entry in the current repo. You can also use an explicit local package path in `.pi/settings.json`:
+That writes a project-local `.pi/settings.json` entry in the current repo. You can also add the GitHub package explicitly:
 
 ```json
 {
-  "packages": ["/Users/joel/Code/joelhooks/pi-notes"]
+  "packages": ["github:joelhooks/pi-notes"]
 }
 ```
 
 For a quick one-off run without installing:
 
 ```bash
-pi -e /Users/joel/Code/joelhooks/pi-notes
+pi -e github:joelhooks/pi-notes
 ```
 
-After install or path changes, run `/reload` in Pi.
+If your Pi version does not support the `github:` shorthand yet, use the HTTPS Git URL:
+
+```bash
+pi install https://github.com/joelhooks/pi-notes.git
+```
+
+After install or package changes, run `/reload` in Pi.
 
 ## Package shape
 
