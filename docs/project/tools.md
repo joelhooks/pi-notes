@@ -6,7 +6,7 @@ Project-local extension: `.pi/extensions/gremlin/index.ts`.
 
 It treats pi-notes like a course build:
 
-- Injects `ID.md` and `TOOLS.md` into every turn.
+- Injects `docs/project/identity.md` and `docs/project/tools.md` into every turn.
 - Adds `/phase <research|shape|plan|build|capture|review>`.
 - Adds `pi_notes_capture` for decisions, concepts, gotchas, risks, and next steps.
 - Adds `course_brain_check` to run `pi-notes brain check`.

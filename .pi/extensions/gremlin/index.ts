@@ -70,9 +70,15 @@ export default function gremlin(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event) => {
     let extra = "";
-    for (const file of ["ID.md", "TOOLS.md"] as const) {
+    const contextFiles = [
+      ["docs/project/identity.md", "identity"],
+      ["docs/project/tools.md", "tools"],
+      ["ID.md", "ID.md"],
+      ["TOOLS.md", "TOOLS.md"],
+    ] as const;
+    for (const [file, label] of contextFiles) {
       const path = join(root(), file);
-      if (existsSync(path)) extra += `\n\n# ${file}\n\n${readFileSync(path, "utf8")}`;
+      if (existsSync(path)) extra += `\n\n# ${label}\n\n${readFileSync(path, "utf8")}`;
     }
     if (extra) return { systemPrompt: event.systemPrompt + extra };
   });

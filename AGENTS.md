@@ -22,7 +22,7 @@ This repo uses a `.brain/` knowledge graph modeled after `/Users/joel/Code/badas
 - `.brain/areas/concepts.svx` captures concepts/glossary.
 - `.brain/areas/review.svx` captures current review findings and next implementation concepts.
 - Do not create append-only build logs as the source of truth. Put knowledge in the focused topic where it belongs.
-- Project-local gremlin extension lives at `.pi/extensions/gremlin/index.ts` and injects `ID.md` + `TOOLS.md`.
+- Project-local gremlin extension lives at `.pi/extensions/gremlin/index.ts` and injects `docs/project/identity.md` + `docs/project/tools.md`.
 - Use `pi_notes_capture` after meaningful decisions, concepts, gotchas, risks, and next steps.
 - Use `/phase <research|shape|plan|build|capture|review>` to keep capture context honest.
 

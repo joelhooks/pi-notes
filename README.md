@@ -7,7 +7,7 @@
 
 pi-notes turns a repo-local `.brain/` folder into readable review pages at `/notes`. The browser is for reading, selecting, and commenting. Pi still owns the source edits and leaves receipts.
 
-![pi-notes Remotion preview](examples/remotion-readme-preview/out/pi-notes-preview.jpeg)
+![pi-notes data-backed note UI](docs/assets/pi-notes-real-ui.png)
 
 It is not Obsidian in a trench coat. It is a local review surface wired to the agent session that opened it.
 
@@ -189,8 +189,6 @@ The Brain checker accepts:
 ```
 
 See `examples/brain-data-backed-note/` and this repo's dogfood page at `.brain/projects/example-data-backed-note.svx`.
-
-The README preview image is generated with Remotion from `examples/remotion-readme-preview/`.
 
 ## Feedback Loop
 

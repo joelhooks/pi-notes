@@ -19,7 +19,7 @@ Use this skill when creating, serving, reviewing, or debugging pi-notes review d
 ## References
 
 - Extension source: `extensions/pi-notes/index.ts`
-- Domain glossary: `CONTEXT.md`
+- Domain glossary: `docs/project/context.md`
 - Architecture decision: `docs/adr/0001-pi-extension-local-review-sites.md`
 - Diagram guidance: `skills/excalidraw-dag/SKILL.md`
 - Diagram Brain entry: `.brain/resources/excalidraw-diagrams.svx` (`http://127.0.0.1:4188/notes/resources/excalidraw-diagrams`)

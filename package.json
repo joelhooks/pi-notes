@@ -29,6 +29,7 @@
     "BRAIN.md",
     "LICENSE",
     "bin/",
+    "docs/assets/",
     "examples/",
     "README.md",
     "extensions/",
@@ -38,9 +39,7 @@
     "docs/diagrams/",
     "svelte.config.js",
     "vite.config.ts",
-    "tsconfig.json",
-    "!examples/**/node_modules/",
-    "!examples/**/node_modules/**"
+    "tsconfig.json"
   ],
   "scripts": {
     "dev": "vite dev --host 127.0.0.1",

@@ -71,7 +71,8 @@
     border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     border-radius: 14px;
     padding: .9rem;
-    background: canvas;
+    background: #fffaf2;
+    color: #1f2937;
   }
 
   .record > div {

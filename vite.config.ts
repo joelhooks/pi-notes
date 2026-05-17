@@ -18,6 +18,9 @@ function brainMdsvexPipeline(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_PI_NOTES_WORKSPACE_ROOT": JSON.stringify(workspaceRoot()),
+  },
   plugins: [brainMdsvexPipeline(), tailwindcss(), sveltekit()],
   ssr: {
     noExternal: ["@hugeicons/svelte", "@hugeicons/core-free-icons"],
