@@ -1,4 +1,4 @@
-# pi-notes
+# 🧠 pi-notes
 
 **A Pi extension for local Brain review pages, data-backed notes, and browser-to-agent feedback.**
 
