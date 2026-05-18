@@ -1,9 +1,12 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { appendFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server, type ServerResponse } from "node:http";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
+
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 type ReviewBatchComment = {
   id?: string;
@@ -123,6 +126,25 @@ function checkLocalBrain(root = process.cwd()) {
     warnings,
     text: [`Brain pages: ${pageCount}`, ...warnings.map((warning) => `brain check warning: ${warning}`), errors.length ? errors.map((error) => `brain check error: ${error}`).join("\n") : "brain check passed"].join("\n"),
   };
+}
+
+function ensureCliShim() {
+  const home = process.env.HOME;
+  if (!home) return undefined;
+
+  const binDir = join(home, ".pi", "agent", "bin");
+  const shimPath = join(binDir, "pi-notes");
+  const cliPath = join(packageRoot, "bin", "pi-notes.ts");
+  const shim = ["#!/usr/bin/env bash", `exec bun ${JSON.stringify(cliPath)} "$@"`, ""].join("\n");
+
+  mkdirSync(binDir, { recursive: true });
+  if (!existsSync(shimPath) || readFileSync(shimPath, "utf8") !== shim) {
+    writeFileSync(shimPath, shim, "utf8");
+    chmodSync(shimPath, 0o755);
+    return shimPath;
+  }
+
+  return undefined;
 }
 
 function initLocalBrain() {
@@ -584,7 +606,7 @@ export default function piNotes(pi: ExtensionAPI) {
     mkdirSync(bridgeDir(), { recursive: true });
     const logFd = openSync(documentHostLogPath(), "a");
     documentHost = spawn("bun", ["run", "dev"], {
-      cwd: process.cwd(),
+      cwd: packageRoot,
       detached: true,
       env: { ...process.env, PI_NOTES_PORT: String(documentHostPort), PI_NOTES_WORKSPACE_ROOT: process.cwd(), VITE_PI_NOTES_WORKSPACE_ROOT: process.cwd() },
       stdio: ["ignore", logFd, logFd],
@@ -627,6 +649,9 @@ export default function piNotes(pi: ExtensionAPI) {
   };
 
   pi.on("session_start", async (_event, ctx) => {
+    const cliShim = ensureCliShim();
+    if (cliShim) pi.appendEntry("pi-notes-cli-shim-installed", { path: cliShim, packageRoot, installedAt: new Date().toISOString() });
+
     const created = initLocalBrain();
     if (created.length > 0) {
       pi.appendEntry("pi-notes-brain-initialized", { created, cwd: process.cwd(), initializedAt: new Date().toISOString() });
