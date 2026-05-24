@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const bridgeDir = () => join(process.cwd(), ".pi", "notes-bridge");
-const inboxDir = () => join(process.cwd(), ".pi", "notes-inbox");
+const workspaceRoot = () => process.env.PI_NOTES_WORKSPACE_ROOT || process.cwd();
+const bridgeDir = () => join(workspaceRoot(), ".pi", "notes-bridge");
+const inboxDir = () => join(workspaceRoot(), ".pi", "notes-inbox");
 const sessionPath = () => join(bridgeDir(), "session.json");
 const traceLogPath = () => join(bridgeDir(), "events.jsonl");
 
@@ -52,6 +53,11 @@ export const POST: RequestHandler = async ({ request }) => {
   appendTrace("document_host.received", { batchId, product: batch.product ?? null, documentId: batch.documentId ?? null });
   writeFileSync(path, `${JSON.stringify(batch, null, 2)}\n`, "utf8");
   appendTrace("document_host.receipt_saved", { batchId, file, path: `.pi/notes-inbox/${file}` });
+
+  if (payload.deliveredViaBridge === true) {
+    appendTrace("document_host.forward.skipped", { batchId, reason: "already_delivered_by_browser_bridge" });
+    return json({ ok: true, status: "saved_after_bridge_delivery", mode: "saved-only", batchId, file, path, savedPath: `.pi/notes-inbox/${file}`, createdAt });
+  }
 
   const bridgeUrl = readSession()?.reviewBatchesUrl;
   if (bridgeUrl) {

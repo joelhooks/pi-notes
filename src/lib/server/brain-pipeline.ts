@@ -98,7 +98,10 @@ export function injectBrainComponentImports(source: string, root = workspaceRoot
   const importBlock = imports.join("\n");
   const moduleScript = source.match(/<script\s+context=["']module["'][^>]*>[\s\S]*?<\/script>/m);
   if (moduleScript) return source.replace(moduleScript[0], moduleScript[0].replace("</script>", `\n${importBlock}\n</script>`));
-  return `<script context="module">\n${importBlock}\n</script>\n\n${source}`;
+  const frontmatter = source.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+  const injectedScript = `<script context="module">\n${importBlock}\n</script>\n\n`;
+  if (frontmatter) return source.replace(frontmatter[0], `${frontmatter[0]}${injectedScript}`);
+  return `${injectedScript}${source}`;
 }
 
 export function brainPipelineSummary(root = workspaceRoot()) {

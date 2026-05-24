@@ -1,6 +1,7 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
   import { ChatFeedbackIcon, CheckmarkCircle02Icon, FileEditIcon, InboxUploadIcon } from "@hugeicons/core-free-icons";
+  import { invalidateAll } from "$app/navigation";
   import { resolve } from "$app/paths";
   import type { PageProps } from "./$types";
   import BrainDocument from "./BrainDocument.svelte";
@@ -36,6 +37,7 @@
   let supportReviewStatus = $state<{ run?: { reviewRunId: string; status?: string; cards: number } | null; counts?: Record<string, number> } | null>(null);
   let sendingApprovedBatch = $state(false);
   let approvedBatchReceipt = $state("");
+  let pendingTriageReload: ReturnType<typeof setTimeout> | null = null;
   let sessionState = $state<{
     connected: boolean;
     session?: {
@@ -59,7 +61,14 @@
   const canSend = $derived((queue.length > 0 || comment.trim().length > 0) && !sending);
   const bridgeState = $derived(sessionState.bridge?.state ?? "idle");
   const activeAgentWork = $derived(agentActivity.some((item) => ["pi_bridge.send.started", "pi_bridge.received", "pi_bridge.enqueue"].includes(item.kind)) || bridgeState === "sending");
-  const currentSupportRunId = $derived(documents[0]?.sourcePath.match(/(sr_[^/.]+)\.svx$/)?.[1] ?? null);
+  function supportRunIdFromDocument(document: { sourcePath: string; blocks: Array<{ text: string }> } | undefined) {
+    if (!document) return null;
+    const fromPath = document.sourcePath.match(/(sr_[^/.]+)\.svx$/)?.[1];
+    if (fromPath) return fromPath;
+    const joinedText = document.blocks.map((block) => block.text).join("\n");
+    return joinedText.match(/Run:\s*`?(sr_[A-Za-z0-9_]+)`?/)?.[1] ?? null;
+  }
+  const currentSupportRunId = $derived(supportRunIdFromDocument(documents[0]));
 
   function pushActivity(kind: string, detail: string, data: unknown = {}) {
     const ts = Date.now();
@@ -145,7 +154,53 @@
     if (payload.ok) supportReviewStatus = payload;
   }
 
-  async function sendApprovedBatch() {
+  function firstExpandedCardElement() {
+    if (typeof document === "undefined") return null;
+    const cards = [...document.querySelectorAll<HTMLElement>(".aih-support-reply-card")];
+    return cards.find((card) => !card.querySelector(".folded-state")) ?? null;
+  }
+
+  function placeRevisedCardNext(cardId: string) {
+    if (typeof document === "undefined") return;
+    const revised = document.querySelector<HTMLElement>(`.aih-support-reply-card[data-card-id="${CSS.escape(cardId)}"]`);
+    const current = firstExpandedCardElement();
+    if (!revised || !current || revised === current) return;
+    const afterCurrent = current.nextElementSibling;
+    if (afterCurrent === revised) return;
+    current.parentElement?.insertBefore(revised, afterCurrent);
+  }
+
+  function scheduleTriageReload(delay = 2000, revisedCardId?: string) {
+    if (pendingTriageReload) clearTimeout(pendingTriageReload);
+    pendingTriageReload = setTimeout(() => {
+      void invalidateAll().then(() => {
+        if (revisedCardId) setTimeout(() => placeRevisedCardNext(revisedCardId), 0);
+      });
+      pendingTriageReload = null;
+    }, delay);
+  }
+
+  function nextSupportActionMode() {
+    if ((supportReviewStatus?.counts?.actionableSendApproved ?? 0) > 0) return "send" as const;
+    if ((supportReviewStatus?.counts?.actionableApplyApproved ?? 0) > 0) return "apply_done" as const;
+    return null;
+  }
+
+  function nextSupportActionLabel() {
+    const sendCount = supportReviewStatus?.counts?.actionableSendApproved ?? 0;
+    const applyCount = supportReviewStatus?.counts?.actionableApplyApproved ?? 0;
+    if (sendCount > 0) return `Send approved replies (${sendCount})`;
+    if (applyCount > 0) return `Apply no-action/archive (${applyCount})`;
+    return "Review cards first";
+  }
+
+  async function processNextSupportAction() {
+    const mode = nextSupportActionMode();
+    if (!mode) return;
+    await sendApprovedBatch(mode);
+  }
+
+  async function sendApprovedBatch(mode: "send" | "apply_done") {
     if (!currentSupportRunId || sendingApprovedBatch) return;
     sendingApprovedBatch = true;
     approvedBatchReceipt = "Queueing approved batch...";
@@ -153,11 +208,16 @@
       const response = await fetch("/api/brain/support-review-batch-send", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ runId: currentSupportRunId }),
+        body: JSON.stringify({ runId: currentSupportRunId, mode }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) throw new Error(payload.error ?? "failed to queue batch");
-      approvedBatchReceipt = `Queued ${payload.queued} approved replies to Pi.`;
+      approvedBatchReceipt = payload.status === "applied"
+        ? `Applied ${payload.applied} approved actions. Archived ${payload.archived}.`
+        : payload.status === "sent"
+          ? `Sent ${payload.sent} approved replies. ${payload.failed ? `${payload.failed} failed.` : ""}`
+          : `Queued ${payload.queued} ${mode === "send" ? "approved replies" : "approved actions"} to Pi.`;
+      if (payload.status === "applied" || payload.status === "sent") scheduleTriageReload();
       void refreshSupportReviewStatus();
     } catch (error) {
       approvedBatchReceipt = error instanceof Error ? error.message : "failed to queue batch";
@@ -191,8 +251,23 @@
       void refreshSession();
     });
     source.addEventListener("changed", (event) => {
+      const payload = JSON.parse(event.data) as { path?: string };
       pushActivity("brain.changed", "Review data changed", event.data);
       void refreshSession();
+      void refreshSupportReviewStatus();
+      if (payload.path?.endsWith("triage.svx") || payload.path?.includes("support-review-runs/")) scheduleTriageReload();
+    });
+    source.addEventListener("support_review", (event) => {
+      pushActivity("support.review", "Support review updated", event.data);
+      void refreshSupportReviewStatus();
+      const payload = JSON.parse(event.data) as { event?: { type?: string; cardId?: string; status?: string } };
+      const type = payload.event?.type ?? "";
+      const cardId = payload.event?.cardId;
+      if (type.includes("action_done") && cardId) {
+        window.dispatchEvent(new CustomEvent("support-review-card-completed", { detail: { cardId, action: payload.event?.status ?? "done", capturedAt: new Date().toISOString() } }));
+        scheduleTriageReload();
+      } else if ((type.includes("card_updated") || type.includes("revision")) && cardId) scheduleTriageReload(0, cardId);
+      else if (type.includes("triage_rebuilt") || type.includes("actions_applied")) scheduleTriageReload();
     });
     source.onerror = () => (bridgeEvent = "SSE disconnected");
     return () => source.close();
@@ -208,36 +283,41 @@
     if (!canSend) return;
     const comments = comment.trim().length > 0 ? [...queue, makeComment(`c${queue.length + 1}`)] : queue;
     const batchId = createBatchId();
+    const batch = {
+      batchId,
+      type: "pi_notes_dogfood_review_batch",
+      adapterId: "pi-notes.brain-docs",
+      product: data.product,
+      documentId: documents[0]?.id ?? "pi-notes-brain",
+      comments,
+      globalInstruction: "Use this feedback to shape pi-notes itself. Browser delivered the batch to Pi; the Document Host keeps a local receipt only.",
+      expectedAgentAction: "Handle the review feedback, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
+    };
     sending = true;
     receipt = `Sending feedback ${batchId}...`;
     try {
-      const response = await fetch("/api/review-batches", {
+      const bridgeUrl = sessionState.session?.reviewBatchesUrl ?? sessionState.bridge?.reviewBatchesUrl;
+      if (!bridgeUrl) throw new Error("missing active Pi bridge reviewBatchesUrl");
+      const bridgeResponse = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          batchId,
-          type: "pi_notes_dogfood_review_batch",
-          adapterId: "pi-notes.brain-docs",
-          product: data.product,
-          documentId: "pi-notes-brain",
-          comments,
-          globalInstruction: "Use this feedback to shape pi-notes itself. Browser saved the batch, the Pi agent should read .pi/notes-inbox and update source/docs.",
-          expectedAgentAction: "Read this saved batch, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
-        }),
+        body: JSON.stringify(batch),
       });
-      const result = await response.json();
-      if (result.ok && result.status === "delivered_to_pi") {
-        receipt = `Sent ${comments.length} feedback item(s) to Pi · ${result.batchId} · saved ${result.savedPath ?? result.file}`;
-        queue = [];
-        comment = "";
-        selected = [];
-      } else if (result.status === "saved_forward_failed") {
-        receipt = `Saved locally, not delivered · ${result.batchId} · ${result.savedPath ?? result.file} · ${result.error ?? "forward failed"}`;
-      } else {
-        receipt = `Send failed · ${result.batchId ?? batchId}`;
-      }
+      const bridgeResult = await bridgeResponse.json().catch(() => ({}));
+      if (!bridgeResponse.ok || !bridgeResult.ok) throw new Error(bridgeResult.error ?? "bridge delivery failed");
+
+      const receiptResponse = await fetch("/api/review-batches", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...batch, deliveredViaBridge: true }),
+      });
+      const receiptResult = await receiptResponse.json().catch(() => ({}));
+      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${bridgeResult.batchId ?? batchId}${receiptResult.savedPath ? ` · saved ${receiptResult.savedPath}` : ""}`;
+      queue = [];
+      comment = "";
+      selected = [];
     } catch (error) {
-      receipt = `Send failed before receipt · ${batchId} · ${error instanceof Error ? error.message : String(error)}`;
+      receipt = `Send failed before Pi delivery · ${batchId} · ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       sending = false;
     }
@@ -330,11 +410,15 @@
             <span><strong>{supportReviewStatus.counts?.noReplyReady ?? 0}</strong><em>no-reply</em></span>
             <span><strong>{supportReviewStatus.counts?.pending ?? 0}</strong><em>pending</em></span>
             <span><strong>{supportReviewStatus.counts?.approved ?? 0}</strong><em>approved</em></span>
+            <span><strong>{supportReviewStatus.counts?.sent ?? 0}</strong><em>sent</em></span>
+            <span><strong>{supportReviewStatus.counts?.archived ?? 0}</strong><em>archived</em></span>
             <span><strong>{supportReviewStatus.counts?.feedbackSent ?? 0}</strong><em>feedback</em></span>
             <span><strong>{supportReviewStatus.counts?.sendQueued ?? 0}</strong><em>send queued</em></span>
             <span><strong>{supportReviewStatus.counts?.archiveQueued ?? 0}</strong><em>archive queued</em></span>
           </div>
-          <button class="batch-send" type="button" onclick={sendApprovedBatch} disabled={sendingApprovedBatch || !supportReviewStatus.counts?.approved}> {sendingApprovedBatch ? "Queueing..." : "Send approved batch"}</button>
+          <div class="batch-actions">
+            <button class="batch-send" type="button" onclick={processNextSupportAction} disabled={sendingApprovedBatch || !nextSupportActionMode()}>{sendingApprovedBatch ? "Working..." : nextSupportActionLabel()}</button>
+          </div>
           {#if approvedBatchReceipt}<p class="send-receipt">{approvedBatchReceipt}</p>{/if}
         </section>
       {/if}
@@ -475,7 +559,8 @@
   .status-grid span { border: 1px solid #eeeeeb; border-radius: 10px; background: #fafafa; padding: 7px; display: grid; gap: 2px; }
   .status-grid strong { color: #24292f; font-size: 16px; line-height: 1; }
   .status-grid em { color: #6b7280; font-size: 11px; font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
-  .batch-send { width: 100%; margin-top: 8px; border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 9px 10px; font: inherit; font-weight: 900; cursor: pointer; }
+  .batch-actions { display: grid; gap: 7px; margin-top: 8px; }
+  .batch-send { width: 100%; border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 9px 10px; font: inherit; font-weight: 900; cursor: pointer; }
   .batch-send:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
   .active-section { border-top-color: #cfd4dc; }
   .section-label { display: flex; align-items: center; gap: 7px; color: #4b5563; font-weight: 650; font-size: 12px; letter-spacing: .02em; margin: 0 0 8px; }

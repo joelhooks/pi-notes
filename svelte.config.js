@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import adapter from "@sveltejs/adapter-node";
 import { mdsvex } from "mdsvex";
+import remarkFrontmatter from "remark-frontmatter";
 
 function workspaceRoot() {
   return process.env.PI_NOTES_WORKSPACE_ROOT || process.cwd();
@@ -27,7 +28,15 @@ async function loadPlugin(specifier) {
   return module.default ?? module;
 }
 
-const remarkPlugins = await Promise.all(loadBrainPipelinePluginSpecifiers(workspaceRoot(), "remarkPlugins").map(loadPlugin));
+function stripFrontmatter() {
+  return (tree) => {
+    if (!Array.isArray(tree.children)) return;
+    tree.children = tree.children.filter((node) => node.type !== "yaml" && node.type !== "toml");
+  };
+}
+
+const projectRemarkPlugins = await Promise.all(loadBrainPipelinePluginSpecifiers(workspaceRoot(), "remarkPlugins").map(loadPlugin));
+const remarkPlugins = [remarkFrontmatter, stripFrontmatter, ...projectRemarkPlugins];
 const rehypePlugins = await Promise.all(loadBrainPipelinePluginSpecifiers(workspaceRoot(), "rehypePlugins").map(loadPlugin));
 
 /** @type {import('@sveltejs/kit').Config} */

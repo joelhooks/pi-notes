@@ -14,16 +14,21 @@ export const GET: RequestHandler = () => {
   const bridgeDir = join(root, ".pi", "notes-bridge");
   const bridgeStatusPath = join(bridgeDir, "status.json");
   const bridgeEventsPath = join(bridgeDir, "events.jsonl");
+  const supportEventsPath = join(root, ".brain", "data", "support-review-events.jsonl");
 
   const readJson = (path: string) => {
     try { return JSON.parse(readFileSync(path, "utf8")); } catch { return null; }
   };
 
-  const readLastBridgeEvent = () => {
+  const readLastLineJson = (path: string) => {
     try {
-      const lines = readFileSync(bridgeEventsPath, "utf8").trim().split("\n").filter(Boolean);
+      const lines = readFileSync(path, "utf8").trim().split("\n").filter(Boolean);
       return lines.length ? JSON.parse(lines[lines.length - 1] ?? "{}") : null;
     } catch { return null; }
+  };
+
+  const readLastBridgeEvent = () => {
+    return readLastLineJson(bridgeEventsPath);
   };
 
   let cleanup: (() => void) | undefined;
@@ -49,8 +54,10 @@ export const GET: RequestHandler = () => {
         ? watch(brainDir, { recursive: true }, (_event, filename) => {
             if (!filename) return;
             const file = String(filename);
-            if (!file.endsWith(".svx") && !file.endsWith(".json") && !file.endsWith(".db")) return;
-            send("changed", { path: join(".brain", file), ts: Date.now() });
+            if (!file.endsWith(".svx") && !file.endsWith(".json") && !file.endsWith(".jsonl") && !file.endsWith(".db")) return;
+            const path = join(".brain", file);
+            send("changed", { path, ts: Date.now() });
+            if (file === join("data", "support-review-events.jsonl")) send("support_review", { event: readLastLineJson(supportEventsPath), ts: Date.now() });
           })
         : undefined;
 

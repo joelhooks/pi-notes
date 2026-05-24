@@ -1,0 +1,61 @@
+{
+  "id": "review-run-example-001",
+  "title": "Provider and variants review",
+  "schema": "BrainProviderVariantRun.v1",
+  "source": ".brain/data/provider-variant-review-run.json",
+  "generatedAt": "2026-05-22T12:00:00.000Z",
+  "privacy": "local",
+  "summary": {
+    "total": 5,
+    "ready": 2,
+    "blocked": 2,
+    "done": 1
+  },
+  "receipts": [
+    {
+      "id": "receipt-ready-001",
+      "status": "ready",
+      "title": "Draft review card is ready",
+      "detail": "The data floor is complete and the card can be reviewed locally.",
+      "capturedAt": "2026-05-22T12:01:00.000Z",
+      "sourcePath": ".brain/data/provider-variant-review-run.json",
+      "sideEffects": []
+    },
+    {
+      "id": "receipt-blocked-001",
+      "status": "blocked",
+      "title": "Freshness receipt missing",
+      "detail": "The child variant names the blocker instead of hiding it behind a boolean prop.",
+      "capturedAt": "2026-05-22T12:02:00.000Z",
+      "sourcePath": ".brain/data/provider-variant-review-run.json",
+      "sideEffects": []
+    },
+    {
+      "id": "receipt-done-001",
+      "status": "done",
+      "title": "Operator feedback saved",
+      "detail": "The receipt is complete and no customer-visible side effect happened.",
+      "capturedAt": "2026-05-22T12:03:00.000Z",
+      "sourcePath": ".brain/data/provider-variant-review-run.json",
+      "sideEffects": []
+    },
+    {
+      "id": "receipt-ready-002",
+      "status": "ready",
+      "title": "Summary view rendered",
+      "detail": "Summary data came from the provider contract, not direct JSON import in the child.",
+      "capturedAt": "2026-05-22T12:04:00.000Z",
+      "sourcePath": ".brain/data/provider-variant-review-run.json",
+      "sideEffects": []
+    },
+    {
+      "id": "receipt-blocked-002",
+      "status": "blocked",
+      "title": "Publish boundary needs review",
+      "detail": "Private local data must be reviewed before any public export.",
+      "capturedAt": "2026-05-22T12:05:00.000Z",
+      "sourcePath": ".brain/data/provider-variant-review-run.json",
+      "sideEffects": []
+    }
+  ]
+}

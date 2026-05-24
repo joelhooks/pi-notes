@@ -1,0 +1,22 @@
+---
+status: active
+source: .brain/data/provider-variant-review-run.json
+---
+
+# Provider and Variants Review
+
+This page demonstrates the provider plus focused child component pattern for data-backed Brain surfaces.
+
+The `.svx` file stays readable. The provider loads the JSON fixture, publishes a typed `data`, `actions`, and `meta` contract, and children render the review summary plus status-specific receipt cards.
+
+<BrainDataProvider>
+  <BrainSummaryCard />
+  <BrainReceiptList />
+</BrainDataProvider>
+
+## Contract
+
+- Data source: `.brain/data/provider-variant-review-run.json`
+- Privacy: local example data
+- Side effects: none, filter buttons only mutate local UI state
+- Verification: `pi-notes brain check`

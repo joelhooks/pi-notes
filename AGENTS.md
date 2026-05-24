@@ -32,6 +32,8 @@ This repo uses a `.brain/` knowledge graph modeled after `/Users/joel/Code/badas
 - Prefer type-safe Effect services for server/runtime boundaries.
 - Use XState v5 for finite lifecycle workflows: site serving, Pi bridge sessions, file watching, send/retry/cancel, review turn status.
 - Use SvelteKit + mdsvex for review documents and local UI.
+- Use the bundled `brain-component-composition` skill when creating or editing `.brain/**/*.svx`, `.brain/components`, `.brain/data`, or data-backed review surfaces.
+- Treat `.brain/components` as a real project component library. Prefer shell/provider components, focused child components, explicit variants, and visible data contracts over boolean prop soup or giant static markdown dumps.
 - Use Tailwind + shadcn-svelte/bits-ui sparingly.
 - Typography-first, restrained, hyper-readable, keyboard navigable. Minimal chrome. No glossy SaaS bullshit.
 - Product namespace is a first-class concept, not a folder naming accident.

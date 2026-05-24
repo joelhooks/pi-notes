@@ -117,36 +117,41 @@
     if (!canSend) return;
     const comments = comment.trim().length > 0 ? [...queue, makeComment(`c${queue.length + 1}`)] : queue;
     const batchId = createBatchId();
+    const batch = {
+      batchId,
+      type: "pi_notes_dogfood_review_batch",
+      adapterId: "pi-notes.brain-docs",
+      product: data.product,
+      documentId: "pi-notes-brain",
+      comments,
+      globalInstruction: "Use this feedback to shape pi-notes itself. Browser delivered the batch to Pi; the Document Host keeps a local receipt only.",
+      expectedAgentAction: "Handle the review feedback, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
+    };
     sending = true;
     receipt = `Sending feedback ${batchId}...`;
     try {
-      const response = await fetch("/api/review-batches", {
+      const bridgeUrl = sessionState.session?.reviewBatchesUrl ?? sessionState.bridge?.reviewBatchesUrl;
+      if (!bridgeUrl) throw new Error("missing active Pi bridge reviewBatchesUrl");
+      const bridgeResponse = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          batchId,
-          type: "pi_notes_dogfood_review_batch",
-          adapterId: "pi-notes.brain-docs",
-          product: data.product,
-          documentId: "pi-notes-brain",
-          comments,
-          globalInstruction: "Use this feedback to shape pi-notes itself. Browser saved the batch, the Pi agent should read .pi/notes-inbox and update source/docs.",
-          expectedAgentAction: "Read this saved batch, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
-        }),
+        body: JSON.stringify(batch),
       });
-      const result = await response.json();
-      if (result.ok && result.status === "delivered_to_pi") {
-        receipt = `Sent ${comments.length} feedback item(s) to Pi · ${result.batchId} · saved ${result.savedPath ?? result.file}`;
-        queue = [];
-        comment = "";
-        selected = [];
-      } else if (result.status === "saved_forward_failed") {
-        receipt = `Saved locally, not delivered · ${result.batchId} · ${result.savedPath ?? result.file} · ${result.error ?? "forward failed"}`;
-      } else {
-        receipt = `Send failed · ${result.batchId ?? batchId}`;
-      }
+      const bridgeResult = await bridgeResponse.json().catch(() => ({}));
+      if (!bridgeResponse.ok || !bridgeResult.ok) throw new Error(bridgeResult.error ?? "bridge delivery failed");
+
+      const receiptResponse = await fetch("/api/review-batches", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...batch, deliveredViaBridge: true }),
+      });
+      const receiptResult = await receiptResponse.json().catch(() => ({}));
+      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${bridgeResult.batchId ?? batchId}${receiptResult.savedPath ? ` · saved ${receiptResult.savedPath}` : ""}`;
+      queue = [];
+      comment = "";
+      selected = [];
     } catch (error) {
-      receipt = `Send failed before receipt · ${batchId} · ${error instanceof Error ? error.message : String(error)}`;
+      receipt = `Send failed before Pi delivery · ${batchId} · ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       sending = false;
     }

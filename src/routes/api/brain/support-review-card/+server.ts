@@ -1,12 +1,12 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { workspaceRoot } from "$lib/server/brain-pipeline";
 
-type SupportReviewCard = { cardId: string; draft?: string; draftMarkdown?: string; draftHtml?: string; [key: string]: unknown };
+type SupportReviewCard = { cardId: string; draft?: string; draftMarkdown?: string; draftHtml?: string; status?: string; bucket?: "active" | "processing" | "revised_ready" | "done"; updatedAt?: string; [key: string]: unknown };
 
 type SupportReviewRun = {
   reviewRunId: string;
@@ -39,6 +39,14 @@ function feedbackDir() {
   return join(workspaceRoot(), ".brain", "data", "operator-feedback");
 }
 
+function supportEventsPath() {
+  return join(workspaceRoot(), ".brain", "data", "support-review-events.jsonl");
+}
+
+function emitSupportEvent(event: Record<string, unknown>) {
+  appendFileSync(supportEventsPath(), `${JSON.stringify({ ts: new Date().toISOString(), ...event })}\n`, "utf8");
+}
+
 function supportReviewDbPath() {
   return join(workspaceRoot(), ".brain", "data", "support-review.db");
 }
@@ -54,7 +62,22 @@ function bridgeReviewBatchesUrl() {
   return status.reviewBatchesUrl ?? (status.bridgeUrl ? `${status.bridgeUrl.replace(/\/$/, "")}/review-batches` : null);
 }
 
-async function sendPiDraftBatch(body: { cardId: string; feedback: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string; approvedDraftHtml?: string }) {
+function supportReviewCli() {
+  return join(workspaceRoot(), "bin", "aih-support-review");
+}
+
+async function enqueueGatewayRevisionJob(body: { runId?: string | null; cardId: string; feedback: string; verdict?: string }) {
+  if (!body.runId) return { ok: false, status: "missing_run_id" };
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync(supportReviewCli(), ["enqueue", "--kind", "support_review.revise_card", "--run-id", body.runId, "--card-id", body.cardId, "--feedback", body.feedback], { cwd: workspaceRoot(), encoding: "utf8", env: { ...process.env, AIH_SUPPORT_ROOT: workspaceRoot() } });
+  const stdout = result.stdout.trim();
+  let payload: unknown = null;
+  try { payload = stdout ? JSON.parse(stdout) : null; } catch {}
+  return { ok: result.status === 0, status: result.status === 0 ? "queued_to_gateway" : "enqueue_failed", code: result.status, stdout, stderr: result.stderr.trim(), payload };
+}
+
+async function sendPiDraftBatch(body: { cardId: string; feedback: string; verdict?: string; currentDraft?: string; conversationId?: string; subject?: string; approvedDraftHtml?: string; runId?: string | null }) {
+  if (!["send_approved", "send_approved_archive"].includes(String(body.verdict))) return await enqueueGatewayRevisionJob({ runId: body.runId, cardId: body.cardId, feedback: body.feedback, verdict: body.verdict });
   const url = bridgeReviewBatchesUrl();
   if (!url) return { ok: false, status: "bridge_unavailable" };
   const isSend = body.verdict === "send_approved" || body.verdict === "send_approved_archive";
@@ -113,7 +136,7 @@ async function ensureFeedbackTable(client: ReturnType<typeof createClient>) {
   `);
 }
 
-async function latestApprovalForCard(cardId: string) {
+async function latestActionForCard(cardId: string) {
   const dbPath = supportReviewDbPath();
   if (!existsSync(dbPath)) return null;
   const client = createClient({ url: `file:${dbPath}` });
@@ -122,7 +145,7 @@ async function latestApprovalForCard(cardId: string) {
     sql: `
       select verdict, feedback, captured_at, payload_json
       from operator_feedback
-      where card_id = ? and verdict in ('approve', 'unapprove')
+      where card_id = ? and verdict in ('approve', 'unapprove', 'send_approved', 'send_approved_archive', 'archive_approved', 'action_done', 'send_approved_done')
       order by captured_at desc, id desc
       limit 1
     `,
@@ -159,6 +182,28 @@ async function writeFeedbackToLibsql(receipt: Record<string, unknown>) {
   client.close();
 }
 
+function markCardProcessing(cardId: string, verdict: string) {
+  const dir = runsDir();
+  if (!existsSync(dir)) return null;
+  for (const file of readdirSync(dir).filter((item) => item.endsWith(".json"))) {
+    const path = join(dir, file);
+    const run = JSON.parse(readFileSync(path, "utf8")) as SupportReviewRun;
+    const card = run.cards?.find((item) => item.cardId === cardId);
+    if (!card) continue;
+    const now = new Date().toISOString();
+    if (["comment", "rewrite", "generate"].includes(verdict)) {
+      card.bucket = "processing";
+      card.status = verdict === "comment" ? "processing_feedback" : "processing_revision";
+      card.updatedAt = now;
+      card.processingReceipt = { startedAt: now, verdict };
+      writeFileSync(path, `${JSON.stringify(run, null, 2)}\n`, "utf8");
+      emitSupportEvent({ type: "support_review.card_processing", runId: run.reviewRunId, cardId, verdict, status: card.status });
+    }
+    return run.reviewRunId;
+  }
+  return null;
+}
+
 function loadRuns(): SupportReviewRun[] {
   const dir = runsDir();
   if (!existsSync(dir)) return [];
@@ -174,7 +219,7 @@ export const GET: RequestHandler = async ({ url }) => {
   for (const run of loadRuns()) {
     const card = run.cards?.find((item) => item.cardId === cardId);
     if (card) {
-      const approval = await latestApprovalForCard(cardId);
+      const approval = await latestActionForCard(cardId);
       return json({ ok: true, reviewRunId: run.reviewRunId, card: { ...hydrateDraft(card), approval } });
     }
   }
@@ -196,8 +241,9 @@ export const POST: RequestHandler = async ({ request }) => {
   };
   await writeFeedbackToLibsql(receipt);
   appendFileSync(join(feedbackDir(), "operator-feedback.jsonl"), `${JSON.stringify(receipt)}\n`, "utf8");
-  const piDraftRequest = ["rewrite", "generate", "send_approved", "send_approved_archive"].includes(String(body.verdict))
-    ? await sendPiDraftBatch({ ...body, cardId: body.cardId, feedback: body.feedback })
+  const runId = markCardProcessing(body.cardId, String(receipt.verdict));
+  const piDraftRequest = ["comment", "rewrite", "generate", "send_approved", "send_approved_archive"].includes(String(body.verdict))
+    ? await sendPiDraftBatch({ ...body, cardId: body.cardId, feedback: body.feedback, runId })
     : null;
-  return json({ ok: true, receipt, piDraftRequest, sqlitePath: supportReviewDbPath() });
+  return json({ ok: true, receipt, piDraftRequest, runId, sqlitePath: supportReviewDbPath() });
 };

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { workspaceRoot } from "$lib/server/brain-pipeline";
 
-type Card = { cardId: string; draftHtml?: string; draftSource?: string; draftVoice?: string; recommendedAction?: string; status?: string };
+type Card = { cardId: string; draftHtml?: string; draftSource?: string; draftVoice?: string; recommendedAction?: string; status?: string; bucket?: "active" | "processing" | "revised_ready" | "done"; sentReceipt?: unknown; archiveReceipt?: unknown; applyReceipt?: unknown };
 type Run = { reviewRunId: string; status?: string; cards?: Card[] };
 
 function runsDir() { return join(workspaceRoot(), ".brain", "data", "support-review-runs"); }
@@ -44,17 +44,19 @@ async function feedbackCounts(cardIds: string[]) {
     const cardId = String(row.card_id);
     if (!cardSet.has(cardId)) continue;
     const verdict = String(row.verdict);
-    if (verdict === "approve" || verdict === "unapprove") latestApproval.set(cardId, verdict);
+    if (["approve", "unapprove", "send_approved", "send_approved_archive", "archive_approved", "action_done", "send_approved_done"].includes(verdict)) latestApproval.set(cardId, verdict);
     if (verdict === "rewrite" || verdict === "generate" || verdict === "comment") feedbackSent += 1;
-    if (verdict === "send_approved") sendQueued += 1;
-    if (verdict === "send_approved_archive") archiveQueued += 1;
+
   }
   return {
     approved: [...latestApproval.values()].filter((value) => value === "approve").length,
     unapproved: [...latestApproval.values()].filter((value) => value === "unapprove").length,
+    sent: [...latestApproval.values()].filter((value) => value === "send_approved" || value === "send_approved_archive").length,
+    archived: [...latestApproval.values()].filter((value) => value === "archive_approved").length,
     feedbackSent,
-    sendQueued,
-    archiveQueued,
+    sendQueued: [...latestApproval.values()].filter((value) => value === "send_approved").length,
+    archiveQueued: [...latestApproval.values()].filter((value) => value === "send_approved_archive").length,
+    latestApproval,
   };
 }
 
@@ -72,12 +74,23 @@ export const GET: RequestHandler = async ({ url }) => {
   if (!run) return json({ ok: false, error: "run not found" }, { status: 404 });
   const cards = run.cards ?? [];
   const counts = await feedbackCounts(cards.map((card) => card.cardId));
-  const replyDraftsReady = cards.filter((card) => card.draftHtml && card.recommendedAction === "reply").length;
-  const noReplyReady = cards.filter((card) => !card.draftHtml && (card.recommendedAction === "archive" || card.recommendedAction?.includes("no_reply") || card.status?.includes("no_draft"))).length;
-  const pending = cards.length - replyDraftsReady - noReplyReady;
+  const latestApproval = counts.latestApproval as Map<string, string>;
+  const isSent = (card: Card) => Boolean(card.sentReceipt || card.status?.startsWith("sent_") || ["send_approved", "send_approved_archive", "send_approved_done"].includes(latestApproval.get(card.cardId) ?? ""));
+  const isArchived = (card: Card) => Boolean(card.archiveReceipt || card.status?.startsWith("archived_") || latestApproval.get(card.cardId) === "archive_approved");
+  const isDoneNoAction = (card: Card) => Boolean(card.status === "approved_no_action_done" || latestApproval.get(card.cardId) === "action_done");
+  const isApproved = (card: Card) => latestApproval.get(card.cardId) === "approve";
+  const isNonReplyAction = (card: Card) => !card.draftHtml && (card.recommendedAction === "archive" || card.recommendedAction?.includes("archive") || card.recommendedAction?.includes("no_reply") || card.recommendedAction?.includes("no_action") || card.status?.includes("no_draft"));
+  const replyDraftsReady = cards.filter((card) => card.draftHtml && card.recommendedAction === "reply" && !isSent(card)).length;
+  const noReplyReady = cards.filter((card) => isNonReplyAction(card) && !isArchived(card) && !isDoneNoAction(card)).length;
+  const actionableSendApproved = cards.filter((card) => isApproved(card) && card.draftHtml && card.recommendedAction === "reply" && !isSent(card)).length;
+  const actionableApplyApproved = cards.filter((card) => isApproved(card) && isNonReplyAction(card) && !isArchived(card) && !isDoneNoAction(card)).length;
+  const sent = cards.filter(isSent).length;
+  const archived = cards.filter(isArchived).length;
+  const doneNoAction = cards.filter(isDoneNoAction).length;
+  const pending = cards.length - replyDraftsReady - noReplyReady - sent - archived - doneNoAction;
   return json({
     ok: true,
     run: { reviewRunId: run.reviewRunId, status: run.status, cards: cards.length },
-    counts: { replyDraftsReady, noReplyReady, pending, ...counts },
+    counts: { replyDraftsReady, noReplyReady, pending: Math.max(0, pending), ...counts, sent, archived, doneNoAction, actionableSendApproved, actionableApplyApproved, latestApproval: undefined },
   });
 };

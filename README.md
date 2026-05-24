@@ -29,6 +29,7 @@ Long-running agent work needs better artifacts than chat exhaust.
 | Review Surface | Select blocks, write comments, queue feedback, send batches back to Pi |
 | Brain scaffold | Creates `BRAIN.md` and `.brain/` on first awakening when missing |
 | Data-backed notes | Canonical `.brain/data/**` + `.brain/components/**` pattern for large JSON/source material |
+| Brain component composition skill | Agent skill for designing reusable MDSvX components, data contracts, and project Brain component libraries |
 | Diagram compiler | Tiny DAG DSL that compiles to Excalidraw previews |
 | CLI | `pi-notes brain check`, `pi-notes rig install`, `pi-notes inbox`, `pi-notes diagram compile` |
 
@@ -142,7 +143,7 @@ Allowed statuses: `active`, `queued`, `blocked`, `paused`, `done`, `archived`.
 
 ## Data-Backed Brain Notes
 
-Use `.brain/data/` for large JSON-backed source material. Use `.brain/components/` for renderers. Keep `.svx` as the narrative shell, not the database.
+Use `.brain/data/` for large JSON-backed source material. Use `.brain/components/` for renderers. Keep `.svx` as the narrative shell, not the database. Agents should load the bundled `brain-component-composition` skill before substantial `.svx`, `.brain/data`, or `.brain/components` work.
 
 Canonical shape:
 
@@ -189,6 +190,8 @@ The Brain checker accepts:
 ```
 
 See `examples/brain-data-backed-note/` and this repo's dogfood page at `.brain/projects/example-data-backed-note.svx`.
+
+For a reusable provider plus child component scaffold, see `examples/brain-provider-variant-surface/`. It includes `BrainDataProvider`, `BrainSummaryCard`, `BrainReceiptList`, and explicit receipt variants. Use that shape when a Brain surface needs shared data, local UI actions, provenance metadata, and multiple workflow states.
 
 ## Feedback Loop
 

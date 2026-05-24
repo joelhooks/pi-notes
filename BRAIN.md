@@ -77,11 +77,20 @@ When reviewing pi-notes content:
 5. Fold temporary captures into durable notes.
 6. Keep browser pages read-only; agents own source edits.
 
+## Component composition
+
+Brain MDSvX is compositional. Agents should treat `.brain/components` as a project component library and `.brain/data` as the machine contract for bulky, refreshable, or private facts.
+
+When a note shape repeats, depends on structured data, or needs a review surface, build or improve a component instead of pasting large static markdown. Prefer shell/provider components that load data and focused child components that render summaries, lists, warnings, receipts, charts, or controls. Use explicit variants instead of boolean mode props. Every data-backed component should disclose source, schema, freshness, privacy scope, and side effects.
+
+pi-notes ships the `brain-component-composition` skill plus `examples/brain-provider-variant-surface/` so Pi, Codex, and other skill-aware harnesses can apply this pattern consistently.
+
 ## System shape
 
 pi-notes should provide:
 
 - project-custom mdsvex/Svelte knowledge UIs
+- data-backed components and review surfaces
 - block refs and graph edges
 - backlinks and orphan/duplicate reviews
 - Review Batches from browser to Pi

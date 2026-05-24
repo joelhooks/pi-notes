@@ -1,9 +1,13 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig, type Plugin } from "vite";
 import { injectBrainComponentImports, workspaceRoot } from "./src/lib/server/brain-pipeline";
 
 const port = Number(process.env.PI_NOTES_PORT ?? 4188);
+const packageRoot = dirname(fileURLToPath(import.meta.url));
+const hostNodeModules = resolve(packageRoot, "node_modules");
 
 function brainMdsvexPipeline(): Plugin {
   return {
@@ -22,8 +26,13 @@ export default defineConfig({
     "import.meta.env.VITE_PI_NOTES_WORKSPACE_ROOT": JSON.stringify(workspaceRoot()),
   },
   plugins: [brainMdsvexPipeline(), tailwindcss(), sveltekit()],
+  resolve: {
+    alias: {
+      layerchart: resolve(hostNodeModules, "layerchart/dist/index.js"),
+    },
+  },
   ssr: {
-    noExternal: ["@hugeicons/svelte", "@hugeicons/core-free-icons"],
+    noExternal: ["@hugeicons/svelte", "@hugeicons/core-free-icons", "layerchart"],
   },
   server: {
     host: "127.0.0.1",
