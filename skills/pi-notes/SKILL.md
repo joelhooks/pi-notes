@@ -14,7 +14,9 @@ Use this skill when creating, serving, reviewing, or debugging pi-notes review d
 - Review docs should batch precise feedback and send it back to the spawning Pi session.
 - Preserve source-grounded content law when reviewing source-derived docs.
 - Keep UI hyper-readable, restrained, and keyboard-first.
-- For diagrams, prefer the local `excalidraw-dag` skill: clean left-to-right DAGs, few boxes, legible labels, linked from Brain entries.
+- For workflow, lifecycle, triage, approval, runtime, or operator-report diagrams, prefer tall vertical D2 flowcharts rendered as static SVG. Use `direction: down`, let labels breathe, and avoid crushed wide posters.
+- Use the local `excalidraw-dag` skill when the note needs a hand-drawn conceptual map. Use D2 when the note needs a workflow, system path, lifecycle, or state transition.
+- Default note/report pages should be quiet: compact hero, modest H1, sane letter spacing, black-on-near-white paper, paragraphs over card grids, and only enough boxes to make receipts scannable.
 
 ## References
 
