@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
 import { codeToHtml } from "shiki";
 import { artifactStatus } from "./diagram-compiler";
+import { renderMermaidFigure } from "./mermaid/shared.js";
 
 export type ReviewBlock = {
   id: string;
@@ -70,9 +71,12 @@ function blockKind(block: string): ReviewBlock["kind"] {
 
 function codeFence(block: string) {
   const match = block.match(/^```([^\n]*)\n?([\s\S]*?)\n?```$/);
+  const info = match?.[1]?.trim() ?? "";
+  const [lang = "text", ...metaParts] = info.split(/\s+/).filter(Boolean);
   return {
-    lang: match?.[1]?.trim() || "text",
-    code: match?.[2] ?? block.replace(/^```\w*\n?/, "").replace(/\n?```$/, ""),
+    lang,
+    meta: metaParts.join(" "),
+    code: match?.[2] ?? block.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, ""),
   };
 }
 
@@ -157,7 +161,8 @@ function renderExcalidrawPreview(root: string, diagramPath: string, warnings: st
 
 async function renderBlock(root: string, block: string, kind: ReviewBlock["kind"]) {
   if (kind === "code") {
-    const { code, lang } = codeFence(block);
+    const { code, lang, meta } = codeFence(block);
+    if (lang === "mermaid") return renderMermaidFigure(code, meta);
     const trimmedCode = code.trim();
     const isSinglePath = !trimmedCode.includes("\n") && !trimmedCode.includes(" ") && !trimmedCode.includes("*");
     const sourceExists = isSinglePath && existsSync(resolve(root, trimmedCode));

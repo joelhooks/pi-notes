@@ -28,10 +28,13 @@ Long-running agent work needs better artifacts than chat exhaust.
 | Document Host | SvelteKit/mdsvex app that renders `.brain/**/*.svx` at `/notes` |
 | Review Surface | Select blocks, write comments, queue feedback, send batches back to Pi |
 | Brain scaffold | Creates `BRAIN.md` and `.brain/` on first awakening when missing |
+| Updatable templates | `pi-notes rig install|update` applies the default Brain scaffold and managed harness instruction blocks |
 | Data-backed notes | Canonical `.brain/data/**` + `.brain/components/**` pattern for large JSON/source material |
+| Standard Brain components | shadcn-like MDSvX component base: callouts, status, source refs, review receipts, diagram frames |
 | Brain component composition skill | Agent skill for designing reusable MDSvX components, data contracts, and project Brain component libraries |
 | Diagram compiler | Tiny DAG DSL that compiles to Excalidraw previews |
-| CLI | `pi-notes brain check`, `pi-notes rig install`, `pi-notes inbox`, `pi-notes diagram compile` |
+| Mermaid rendering | Fenced `mermaid` blocks render to tldraw-style light/dark SVGs |
+| CLI | `pi-notes brain check`, `pi-notes rig install`, `pi-notes inbox`, `pi-notes diagram compile`, `pi-notes mermaid render` |
 
 ## Install
 
@@ -73,8 +76,10 @@ Normal use should not require `/notes connect`; the extension auto-connects on s
 ```bash
 pi-notes brain check
 pi-notes rig install /path/to/repo
+pi-notes rig update /path/to/repo
 pi-notes inbox
 pi-notes diagram compile docs/diagrams/example.diagram
+pi-notes mermaid render
 ```
 
 ## How It Works
@@ -191,11 +196,13 @@ The Brain checker accepts:
 
 See `examples/brain-data-backed-note/` and this repo's dogfood page at `.brain/projects/example-data-backed-note.svx`.
 
+Standard components auto-import by tag name: `NoteCallout`, `StatusPill`, `SourceReference`, `ReviewReceipt`, `DiagramFrame`, plus review/support helpers. Project components with the same tag name override package defaults.
+
 For a reusable provider plus child component scaffold, see `examples/brain-provider-variant-surface/`. It includes `BrainDataProvider`, `BrainSummaryCard`, `BrainReceiptList`, and explicit receipt variants. Use that shape when a Brain surface needs shared data, local UI actions, provenance metadata, and multiple workflow states.
 
 ## Feedback Loop
 
-The browser sends a Review Batch to the same-origin SvelteKit API. The Document Host saves an ingress receipt, forwards the batch to the extension bridge, and the bridge sends it into the current Pi session as a user turn.
+The browser sends a Review Batch to the same-origin SvelteKit API. Do not POST from the browser directly to `127.0.0.1`; HTTPS, tailnet, and phone browsers make that brittle. The Document Host saves an ingress receipt, forwards the batch server-side to the extension bridge, and the bridge sends it into the current Pi session as a user turn.
 
 Receipts and traces live under ignored local state:
 
@@ -230,6 +237,41 @@ docs/diagrams/pi-notes-feedback-loop.diagram
 ````
 
 The note renderer previews the existing artifact and shows stale/missing warnings. Page render does not mutate files.
+
+Fenced Mermaid blocks render through a tldraw/Playwright harness into workspace-local SVGs:
+
+````md
+```mermaid width=520
+flowchart LR
+  Note --> Host --> Pi
+```
+````
+
+Generated SVGs live in ignored local cache `.pi/notes-cache/diagrams/` and are served at `/diagrams/{hash}.svg`. Dev/build render them automatically; to render manually:
+
+```bash
+pi-notes mermaid render
+pi-notes mermaid clean
+```
+
+Fresh machines may need one Playwright browser install first:
+
+```bash
+bunx playwright install chromium
+```
+
+## Templates and harness instructions
+
+The default project scaffold lives in `templates/default/`. It installs missing Brain pages and appends managed instruction blocks to `AGENTS.md`, `CLAUDE.md`, and `.pi/APPEND_SYSTEM.md`.
+
+```bash
+pi-notes rig install /path/to/repo # create missing scaffold, preserve local files
+pi-notes rig update /path/to/repo  # refresh managed pi-notes instruction blocks
+```
+
+`rig update` does not overwrite project-owned `.brain` pages or local components. It only refreshes managed instruction blocks and creates missing defaults.
+
+Codex package coverage lives in `.codex-plugin/` and `hooks/`; Pi coverage lives in `extensions/pi-notes/`; Claude/Codex repo-file coverage comes from the managed template blocks.
 
 ## Development
 

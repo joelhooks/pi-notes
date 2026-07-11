@@ -24,6 +24,7 @@ type ReviewBatch = {
   createdAt?: string;
   comments?: ReviewBatchComment[];
   expectedAgentAction?: string;
+  sourceInboxFile?: string;
 };
 
 type InboxBatch = {
@@ -340,6 +341,14 @@ function nextUnprocessedBatch() {
   return undefined;
 }
 
+function safeInboxFile(value: unknown) {
+  return typeof value === "string" && /^[A-Za-z0-9_.-]+\.json$/.test(value) && !value.includes("..") ? value : undefined;
+}
+
+function directBatchFile(batch: ReviewBatch & { batchId: string }) {
+  return safeInboxFile(batch.sourceInboxFile) ?? `direct-${batch.batchId}.json`;
+}
+
 function formatBatchForAgent(file: string, batch: ReviewBatch) {
   const comments = (batch.comments ?? [])
     .map((comment) =>
@@ -500,7 +509,7 @@ export default function piNotes(pi: ExtensionAPI) {
 
   const sendDirectBatch = async (batch: ReviewBatch) => {
     const hydrated = withBatchId({ ...batch, createdAt: batch.createdAt ?? new Date().toISOString() });
-    const file = `direct-${hydrated.batchId}.json`;
+    const file = directBatchFile(hydrated);
     try {
       const sentBatch = await enqueueSend(file, hydrated);
       emitBridgeEvent("sent", { ok: true, batchId: sentBatch.batchId, documentId: sentBatch.documentId ?? null, commentCount: sentBatch.comments?.length ?? 0 });
@@ -540,13 +549,22 @@ export default function piNotes(pi: ExtensionAPI) {
         let body = "";
         req.on("data", (chunk) => (body += String(chunk)));
         req.on("end", () => {
-          const batch = withBatchId(JSON.parse(body || "{}") as ReviewBatch);
-          appendTrace("pi_bridge.received", { batchId: batch.batchId, bytes: body.length, route: activeRoute });
+          let batch: ReviewBatch & { batchId: string };
+          try {
+            batch = withBatchId(JSON.parse(body || "{}") as ReviewBatch);
+          } catch (error) {
+            res.writeHead(400, { "content-type": "application/json" });
+            res.end(JSON.stringify({ ok: false, status: "invalid_json", error: error instanceof Error ? error.message : String(error) }));
+            return;
+          }
+          const sourceInboxFile = safeInboxFile(batch.sourceInboxFile) ?? null;
+          appendTrace("pi_bridge.received", { batchId: batch.batchId, bytes: body.length, route: activeRoute, sourceInboxFile });
           pi.appendEntry("pi-notes-direct-batch-received", {
             batchId: batch.batchId,
             receivedAt: new Date().toISOString(),
             bytes: body.length,
             route: activeRoute,
+            sourceInboxFile,
           });
           void sendDirectBatch(batch)
             .then((sentBatch) => {

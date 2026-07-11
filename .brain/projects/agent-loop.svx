@@ -15,8 +15,9 @@ The first working connection is session-declared with a direct SSE/HTTP bridge.
 3. The extension writes `.pi/notes-bridge/session.json` with session file, leaf id, cwd, route, browser URL, and bridge endpoints.
 4. The extension starts a local bridge server on `127.0.0.1:4288`.
 5. The browser reads `/api/session`, opens same-origin `EventSource` to `/api/events` for `.brain` changes, and posts Review Batches to `/api/review-batches`.
-6. The SvelteKit endpoint saves the batch for receipts and forwards it to the extension bridge URL when connected.
-7. The extension sends each Review Batch into the active Pi session with `sendUserMessage(..., { deliverAs: "followUp" })`.
+6. The SvelteKit endpoint saves the batch for receipts and forwards it server-side to the extension bridge URL when connected.
+7. The forwarded payload includes `sourceInboxFile`, so the extension can mark the saved `.pi/notes-inbox/{batchId}.json` file processed and avoid duplicate watcher injection.
+8. The extension sends each Review Batch into the active Pi session with `sendUserMessage(..., { deliverAs: "followUp" })`.
 
 The old inbox file path remains only as a manual fallback/debug affordance. It is not the primary agent loop.
 
@@ -47,7 +48,7 @@ These commands are the minimum agent-loop bridge before direct browser-to-sessio
 - `/notes unwatch` — stop the bridge.
 - `pi_notes_latest_batch` — tool form that reads and formats the latest batch without injecting it.
 
-The URL contract always includes `http://127.0.0.1:4188/pi-notes`. A portless URL such as `https://pi-notes.localhost/pi-notes` is preferred when configured, but it is optional and should stay a quiet affordance rather than a blocker.
+The URL contract always includes the active Document Host URL. Browser feedback must remain same-origin through `/api/review-batches`; direct browser POSTs to `127.0.0.1` are not reliable from HTTPS, tailnet, or mobile contexts. A portless URL is preferred when configured, but it is optional and should stay a quiet affordance rather than a blocker.
 
 ## Bridge state sketch
 

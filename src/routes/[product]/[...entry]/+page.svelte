@@ -290,29 +290,23 @@
       product: data.product,
       documentId: documents[0]?.id ?? "pi-notes-brain",
       comments,
-      globalInstruction: "Use this feedback to shape pi-notes itself. Browser delivered the batch to Pi; the Document Host keeps a local receipt only.",
+      globalInstruction: "Use this feedback to shape pi-notes itself. The Document Host saved the Review Batch and forwarded it to the active Pi bridge when connected.",
       expectedAgentAction: "Handle the review feedback, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
     };
     sending = true;
     receipt = `Sending feedback ${batchId}...`;
     try {
-      const bridgeUrl = sessionState.session?.reviewBatchesUrl ?? sessionState.bridge?.reviewBatchesUrl;
-      if (!bridgeUrl) throw new Error("missing active Pi bridge reviewBatchesUrl");
-      const bridgeResponse = await fetch(bridgeUrl, {
+      const response = await fetch("/api/review-batches", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(batch),
       });
-      const bridgeResult = await bridgeResponse.json().catch(() => ({}));
-      if (!bridgeResponse.ok || !bridgeResult.ok) throw new Error(bridgeResult.error ?? "bridge delivery failed");
-
-      const receiptResponse = await fetch("/api/review-batches", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...batch, deliveredViaBridge: true }),
-      });
-      const receiptResult = await receiptResponse.json().catch(() => ({}));
-      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${bridgeResult.batchId ?? batchId}${receiptResult.savedPath ? ` · saved ${receiptResult.savedPath}` : ""}`;
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        receipt = `Saved locally but not delivered to Pi · ${result.savedPath ?? batchId} · ${result.error ?? result.status ?? "bridge unavailable"}`;
+        return;
+      }
+      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${result.batchId ?? batchId}${result.savedPath ? ` · saved ${result.savedPath}` : ""}`;
       queue = [];
       comment = "";
       selected = [];

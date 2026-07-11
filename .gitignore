@@ -10,6 +10,7 @@ build
 
 .pi/notes-bridge/
 .pi/notes-inbox/
+.pi/notes-cache/
 .pi/course-log.jsonl
 
 # Reference repos are shallow source subtrees. They are intentionally ignored by tooling scans;

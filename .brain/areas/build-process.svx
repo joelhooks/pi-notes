@@ -1,5 +1,23 @@
 # Build Process
 
+- **code-change / Rollout Template** (build, 2026-06-15): Added a versionable default template under `templates/default`, `pi-notes rig update`, managed Pi/Claude/Codex instruction blocks, Codex plugin/hook coverage, and standard Brain components (`DiagramFrame`, `ReviewReceipt`, `SourceReference`). Rolled the template to joelclaw system targets on flagg, blaine, and panda.
+  - Checks: `bun run check`, `bun run brain:check`, `bun run build`, temp repo `rig install/update`, `npm pack --dry-run --json`, and remote `pi-notes brain check` on updated targets.
+  - Constraint handled: blaine's `pi-notes` package repo had substantial pre-existing uncommitted multi-harness work, so it was stashed first (`pre pi-notes rollout 2026-06-15T17:02:12Z`) before syncing the flagg package working tree and validating it.
+
+- **decision / pi-notes Vision** (shape, 2026-06-15): Added `VISION.md` as repo-level product intent for pi-notes, covering the shared Brain component library, updatable templates, diagram adapters, cross-harness instruction packs, and Review Batch reliability. `AGENTS.md` now points agents to `VISION.md` for intent while keeping commands and operational rules in agent docs/skills.
+
+- **code-change / Mermaid Tldraw Diagrams** (build, 2026-06-15): Added fenced `mermaid` support for Brain MDSvX notes using a tldraw/Playwright render harness, source-hash SVG URLs, and workspace-local cache files under `.pi/notes-cache/diagrams` served by `/diagrams/{hash}.svg`.
+  - Files: `src/lib/server/mermaid/*`, `scripts/render-mermaid.ts`, `scripts/mermaid/*`, `src/routes/diagrams/[file]/+server.ts`, `svelte.config.js`, `vite.config.ts`, `package.json`, `.brain/resources/mermaid-diagrams.svx`.
+
+- **code-change / Review Batch Delivery Repair** (build, 2026-06-15): Browser feedback now posts only to same-origin `/api/review-batches`; the Document Host saves the inbox receipt, forwards server-side to the active Pi bridge, and passes `sourceInboxFile` so the bridge marks the saved batch processed.
+  - This removes fragile browser POSTs to `127.0.0.1` and avoids duplicate watcher sends for forwarded batches. Files: `src/routes/[product]/+page.svelte`, `src/routes/[product]/[...entry]/+page.svelte`, `src/routes/api/review-batches/+server.ts`, `extensions/pi-notes/index.ts`.
+
+- **code-change / Selection Hover Removal** (build, 2026-06-15): Removed paragraph/block hover pre-selection styling from Brain review documents. Blocks only show the blue selection treatment after explicit click/keyboard selection.
+  - Files: `src/routes/[product]/[...entry]/BrainDocument.svelte`, `src/routes/[product]/+page.svelte`.
+
+- **gotcha / Pi Extension Duplication** (build, 2026-06-15): A context-builder subagent failed when both the packaged pi-notes extension and project-local `.pi/extensions/pi-notes` copy loaded, because both registered the same `pi_notes_*` tools.
+  - The implementation continued manually. Future subagent work should ensure only one pi-notes extension copy is active for child runs.
+
 Durable setup steps and reproducible commands for rebuilding the current pi-notes scaffold.
 
 ## Captured setup

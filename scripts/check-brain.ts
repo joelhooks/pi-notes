@@ -15,6 +15,7 @@ function walk(dir: string): string[] {
 }
 
 function isAllowedBrainFile(path: string) {
+  if (path.split("/").at(-1) === ".DS_Store") return true;
   if (path.endsWith(".svx")) return true;
   if (path.startsWith(".brain/data/")) return true;
   if (path.startsWith(".brain/components/") && path.endsWith(".svelte")) return true;

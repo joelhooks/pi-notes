@@ -32,9 +32,25 @@ Brain Data keeps `.svx` pages small and narrative while letting the Document Hos
 
 ## Brain Component
 
-A project-local Svelte renderer under `.brain/components/**/*.svelte`.
+A Svelte renderer used inside MDSvX Brain pages.
 
-Brain Components are auto-imported by tag name in `.svx` pages. They should own pagination, virtualization, lazy media, and safe text rendering for `.brain/data/**` records.
+pi-notes ships standard Brain Components such as `NoteCallout`, `StatusPill`, `SourceReference`, `ReviewReceipt`, and `DiagramFrame`. Project-local components under `.brain/components/**/*.svelte` override package defaults by tag name. Components should own pagination, virtualization, lazy media, provenance, and safe text rendering for `.brain/data/**` records.
+
+## Brain Component Library
+
+The shared pi-notes component layer for MDSvX notes. It should feel like shadcn for local Brain pages: copyable, inspectable, focused, tasteful, and easy to override.
+
+## Template Registry
+
+Versioned default Brain scaffold and harness instruction files that pi-notes can install or update without overwriting project-owned Brain content.
+
+## Diagram Adapter
+
+A renderer contract for Mermaid, D2, Excalidraw artifacts, and the pi-notes DAG DSL. It extracts source, computes a stable hash, renders cached artifacts, records provenance, and returns readable light/dark output.
+
+## Harness Instruction Pack
+
+A shared instruction source that emits Pi, Claude, Codex, AGENTS, and skill guidance so installed pi-notes projects do not drift across harnesses.
 
 ## Spawned Session
 

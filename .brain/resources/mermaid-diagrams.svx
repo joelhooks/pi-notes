@@ -1,0 +1,35 @@
+---
+status: active
+---
+
+# Mermaid Diagrams
+
+pi-notes supports fenced `mermaid` blocks in Brain `.svx` notes as rendered review artifacts.
+
+## Runtime shape
+
+```mermaid width=520
+flowchart LR
+  Note["Brain .svx note"] --> Remark["remark plugin"]
+  Remark --> Img["/diagrams/hash.svg"]
+  Note --> Renderer["tldraw harness"]
+  Renderer --> Cache[".pi/notes-cache/diagrams"]
+  Cache --> Host["Document Host route"]
+  Host --> Img
+```
+
+## Decisions
+
+- The public URL is source-hash based: `/diagrams/{hash}.svg` and `/diagrams/{hash}.dark.svg`.
+- Generated SVGs live in `.pi/notes-cache/diagrams`, not package `static/`, because the Document Host renders the active workspace Brain.
+- The renderer embeds a version marker in each SVG so render changes can refresh cached files without changing note URLs.
+- The mdsvex remark plugin only rewrites the document AST. Browser-based rendering happens in `scripts/render-mermaid.ts`, never during page render.
+
+## Commands
+
+```bash
+bun run mermaid:render
+bun run mermaid:clean
+```
+
+The Vite plugin renders diagrams before dev/build and re-renders on `.brain` or `docs` markdown changes.

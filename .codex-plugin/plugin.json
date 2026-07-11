@@ -1,0 +1,41 @@
+{
+  "name": "pi-notes",
+  "version": "0.0.0",
+  "description": "Operate pi-notes Brain review surfaces, data-backed notes, and multi-harness local review workflows in Codex.",
+  "author": {
+    "name": "Joel Hooks",
+    "url": "https://github.com/joelhooks"
+  },
+  "homepage": "https://github.com/joelhooks/pi-notes#readme",
+  "repository": "https://github.com/joelhooks/pi-notes",
+  "license": "MIT",
+  "keywords": [
+    "pi-notes",
+    "codex",
+    "brain",
+    "review-documents",
+    "local-notes",
+    "mdsvex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "pi-notes",
+    "shortDescription": "Use pi-notes Brain review workflows in Codex.",
+    "longDescription": "pi-notes packages local Brain review documents, data-backed MDSvX notes, diagram helpers, and harness-specific guidance. The Codex plugin is skill-first today; active browser-to-agent feedback remains adapter-specific.",
+    "developerName": "Joel Hooks",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "Local Files",
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/joelhooks/pi-notes",
+    "brandColor": "#2563EB",
+    "defaultPrompt": [
+      "Open the pi-notes Brain review surface for this repo.",
+      "Check and improve this repo's .brain notes.",
+      "Create a data-backed pi-notes Brain review page."
+    ]
+  }
+}

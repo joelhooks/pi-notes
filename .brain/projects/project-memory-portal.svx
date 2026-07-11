@@ -1,0 +1,57 @@
+---
+title: "Project Memory Portal"
+type: "project"
+status: "active"
+created_at: "2026-06-23"
+tags:
+  - document-host
+  - brain
+  - session-history
+  - mdsvx
+  - portal
+---
+
+# Project Memory Portal
+
+## Goal
+
+Make a project Brain render as a stable operator portal, not just a pile of notes: project memory at the top, then workstreams, sessions, turns, and tool-call receipts underneath.
+
+`.brain/` remains the source/data layer. The SvelteKit/MDSvX Document Host is the product surface that can be served locally, on tailnet, or as static output when safe.
+
+## Why this belongs in pi-notes
+
+pi-notes already owns the reusable pieces:
+
+- Document Host routing and rendering for `.brain/**/*.svx`
+- project-local Brain components and `.brain/data/**` contracts
+- Review Surface and Session Bridge concepts
+- package-level guidance for Pi/Claude/Codex agents
+- safe, readable MDSvX pages instead of opaque local databases
+
+Product-specific bridges should emit or consume data/link contracts. They should not fork the portal stack.
+
+## Dogfood source
+
+`pi-discord-threads` is the first pressure test. Its Discord HUD/final-summary loop needs a stable memory link that stays useful across turns and points into a richer project/session history surface.
+
+The bridge-side tracer bullet should produce curated session-memory data and a stable link object. pi-notes should later generalize the portal routes, components, and session-history adapters.
+
+## Initial shape
+
+- Project portal route: stable entrypoint for the repo Brain.
+- Workstream index: groups related Discord/Pi sessions, project notes, decisions, and open loops.
+- Session page: curated summary plus links to raw Pi JSONL truth where available.
+- Turn drilldown: prompt, final answer, tool-call receipts, checks, and risks.
+- Component kit: source-copyable MDSvX components for summaries, timelines, receipts, decisions, risks, and next actions.
+
+## Boundaries
+
+- Do not treat raw chat transcripts as the human artifact.
+- Do not store private machine paths, secrets, customer data, or raw Discord IDs in public/static outputs.
+- Do not make product-specific adapters define core portal architecture.
+- Do not overwrite project Brain content when adding generated session data.
+
+## Next slice
+
+Define the shared data contract for project/workstream/session/turn/tool-call records, then render a minimal read-only portal view from `.brain/data/**`.

@@ -8,10 +8,13 @@ export type BrainPipelineConfig = {
 };
 
 export const defaultBrainComponentImports: Record<string, string> = {
+  DiagramFrame: "$lib/brain-components/DiagramFrame.svelte",
   ExternalLink: "$lib/brain-components/ExternalLink.svelte",
   FeedbackControls: "$lib/brain-components/FeedbackControls.svelte",
   GateTrace: "$lib/brain-components/GateTrace.svelte",
   NoteCallout: "$lib/brain-components/NoteCallout.svelte",
+  ReviewReceipt: "$lib/brain-components/ReviewReceipt.svelte",
+  SourceReference: "$lib/brain-components/SourceReference.svelte",
   StatusPill: "$lib/brain-components/StatusPill.svelte",
   SupportReplyCard: "$lib/brain-components/SupportReplyCard.svelte",
 };

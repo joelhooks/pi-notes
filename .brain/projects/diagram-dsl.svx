@@ -48,9 +48,11 @@ Raw Excalidraw JSON is noisy and hostile to agents. It mixes durable meaning wit
 
 Agents should edit the concise source and let a compiler regenerate the artifact.
 
-## Why not Mermaid as canonical
+## Mermaid boundary
 
-Mermaid is useful as an import/export bridge, but it does not encode the house style tightly enough:
+Fenced `mermaid` blocks are now supported as rendered review artifacts through the tldraw harness. Use them for quick source-local diagrams and external material that already speaks Mermaid.
+
+Mermaid is still not the canonical house diagram source for pi-notes architecture diagrams. It does not encode the house style tightly enough:
 
 - spacing presets
 - lane placement
@@ -88,7 +90,7 @@ Line comments are allowed for source notes and are ignored by the compiler:
 Surface -> Bridge: send
 ```
 
-Avoid general-purpose styling, conditionals, nested subgraphs, and Mermaid compatibility in the first pass. The point is to make clean diagrams easier than messy ones. Mermaid import/export is explicitly deferred.
+Avoid general-purpose styling, conditionals, nested subgraphs, and broad Mermaid compatibility in the `.diagram` DSL. The point is to make clean diagrams easier than messy ones. Mermaid support is a separate fenced-code render path, not a reason to turn the DSL into Mermaid.
 
 If a diagram exceeds the clean DAG limits, render it anyway but emit a visible warning. The warning should name the likely readability issue and suggest a split, but it should not block artifact generation. Long node labels should also warn and render anyway.
 

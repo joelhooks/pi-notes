@@ -89,7 +89,6 @@
 
 <style>
   .brain-document :global([data-selectable-block]) { cursor: pointer; border-radius: 8px; transition: outline-color .12s ease, background-color .12s ease; }
-  .brain-document :global([data-selectable-block]:hover) { outline: 2px solid color-mix(in srgb, #2563eb 28%, transparent); outline-offset: 3px; }
   .brain-document :global([data-selectable-block][data-selected="true"]) { outline: 3px solid color-mix(in srgb, #2563eb 52%, transparent); outline-offset: 4px; background: color-mix(in srgb, #2563eb 7%, transparent); }
   .brain-render-error, .brain-render-loading, .brain-render-fallback {
     border: 1px solid #fecaca;

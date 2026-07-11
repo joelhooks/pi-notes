@@ -1,0 +1,15 @@
+# {{projectTitle}} Brain
+
+Self-documenting project graph installed by pi-notes.
+
+## Core
+
+- [[concepts]] — vocabulary and concept inventory
+- [[architecture]] — system shape and runtime boundaries
+- [[build-process]] — durable build process notes and validation receipts
+- [[review]] — current review findings, risks, and next decisions
+- [[component-library]] — local MDSvX component and data-backed note guidance
+
+## Working rule
+
+Do not keep the transcript as the artifact. Capture durable knowledge in the focused topic where it belongs.

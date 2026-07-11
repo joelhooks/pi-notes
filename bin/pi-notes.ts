@@ -13,8 +13,11 @@ function usage(exitCode = 0): never {
 Usage:
   pi-notes brain check [repo]
   pi-notes rig install <repo>
+  pi-notes rig update <repo>
   pi-notes inbox [repo]
   pi-notes diagram compile <file>
+  pi-notes mermaid render [repo]
+  pi-notes mermaid clean [repo]
 `);
   process.exit(exitCode);
 }
@@ -36,6 +39,7 @@ function walk(dir: string): string[] {
 }
 
 function isAllowedBrainFile(path: string) {
+  if (path.split("/").at(-1) === ".DS_Store") return true;
   if (path.endsWith(".svx")) return true;
   if (path.startsWith(".brain/data/")) return true;
   if (path.startsWith(".brain/components/") && path.endsWith(".svelte")) return true;
@@ -89,10 +93,12 @@ const [cmd, subcmd, ...rest] = process.argv.slice(2);
 if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") usage(0);
 
 if (cmd === "brain" && subcmd === "check") brainCheck(rest[0]);
-else if (cmd === "rig" && subcmd === "install") {
+else if (cmd === "rig" && (subcmd === "install" || subcmd === "update")) {
   const target = rest[0];
   if (!target) usage(1);
-  runBunScript("install-rig.ts", [target]);
+  runBunScript("install-rig.ts", subcmd === "update" ? ["--update-managed", target] : [target]);
 } else if (cmd === "inbox") runBunScript("read-notes-inbox.ts", rest);
 else if (cmd === "diagram" && subcmd === "compile") runBunScript("compile-diagram.ts", rest);
+else if (cmd === "mermaid" && subcmd === "render") runBunScript("render-mermaid.ts", rest);
+else if (cmd === "mermaid" && subcmd === "clean") runBunScript("render-mermaid.ts", ["--clean", ...rest]);
 else usage(1);

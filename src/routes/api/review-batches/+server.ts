@@ -66,7 +66,7 @@ export const POST: RequestHandler = async ({ request }) => {
       const bridgeResponse = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(batch),
+        body: JSON.stringify({ ...batch, sourceInboxFile: file }),
       });
       const bridge = await bridgeResponse.json().catch(() => ({}));
       if (!bridgeResponse.ok) {

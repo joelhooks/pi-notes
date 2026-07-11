@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig, type Plugin } from "vite";
 import { injectBrainComponentImports, workspaceRoot } from "./src/lib/server/brain-pipeline";
+import { mermaidTldrawPlugin } from "./src/lib/server/mermaid/vite-plugin";
 
 const port = Number(process.env.PI_NOTES_PORT ?? 4188);
 const packageRoot = dirname(fileURLToPath(import.meta.url));
@@ -25,7 +26,7 @@ export default defineConfig({
   define: {
     "import.meta.env.VITE_PI_NOTES_WORKSPACE_ROOT": JSON.stringify(workspaceRoot()),
   },
-  plugins: [brainMdsvexPipeline(), tailwindcss(), sveltekit()],
+  plugins: [brainMdsvexPipeline(), mermaidTldrawPlugin(workspaceRoot()), tailwindcss(), sveltekit()],
   resolve: {
     alias: {
       layerchart: resolve(hostNodeModules, "layerchart/dist/index.js"),

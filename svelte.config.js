@@ -3,6 +3,7 @@ import { join } from "node:path";
 import adapter from "@sveltejs/adapter-node";
 import { mdsvex } from "mdsvex";
 import remarkFrontmatter from "remark-frontmatter";
+import { remarkMermaidTldraw } from "./src/lib/server/mermaid/remark-mermaid-tldraw.js";
 
 function workspaceRoot() {
   return process.env.PI_NOTES_WORKSPACE_ROOT || process.cwd();
@@ -36,7 +37,7 @@ function stripFrontmatter() {
 }
 
 const projectRemarkPlugins = await Promise.all(loadBrainPipelinePluginSpecifiers(workspaceRoot(), "remarkPlugins").map(loadPlugin));
-const remarkPlugins = [remarkFrontmatter, stripFrontmatter, ...projectRemarkPlugins];
+const remarkPlugins = [remarkFrontmatter, stripFrontmatter, remarkMermaidTldraw, ...projectRemarkPlugins];
 const rehypePlugins = await Promise.all(loadBrainPipelinePluginSpecifiers(workspaceRoot(), "rehypePlugins").map(loadPlugin));
 
 /** @type {import('@sveltejs/kit').Config} */

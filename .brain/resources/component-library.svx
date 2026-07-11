@@ -1,0 +1,35 @@
+# Component Library
+
+pi-notes standard Brain components are the shared, shadcn-like base layer for MDSvX notes. They should be tasteful defaults that projects can use immediately or override with `.brain/components/**`.
+
+## Current standard components
+
+- `NoteCallout` — compact callouts for notes, warnings, and decisions.
+- `StatusPill` — inline status markers.
+- `SourceReference` — file/URL/note/data provenance chips.
+- `ReviewReceipt` — Review Batch handling receipt summary.
+- `DiagramFrame` — framed diagram artifact with renderer and source provenance.
+- `FeedbackControls`, `GateTrace`, `SupportReplyCard`, `ExternalLink` — existing review/support helpers.
+
+## Composition law
+
+Keep `.svx` as the narrative shell. Use components when a shape repeats, needs structured data, needs provenance, or carries review actions.
+
+Good:
+
+```svx
+<SourceReference kind="file" path="src/lib/server/brain-pipeline.ts" />
+<ReviewReceipt batchId="batch-123" status="handled" handled={3} />
+<DiagramFrame src="/diagrams/example.svg" renderer="mermaid" source=".brain/resources/example.svx" />
+```
+
+Bad:
+
+- giant static HTML pasted into `.svx`
+- raw JSON dumps in prose pages
+- one mega component with twenty boolean props
+- components that hide where data came from
+
+## Project overrides
+
+Project-local components live at `.brain/components/**/*.svelte` and win over package defaults by tag name. Use this for domain-specific surfaces, not for gratuitous restyling.

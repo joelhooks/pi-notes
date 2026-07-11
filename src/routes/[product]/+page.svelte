@@ -55,11 +55,12 @@
 
   function toggleBlock(block: SelectedBlock, event: MouseEvent) {
     const multi = event.metaKey || event.ctrlKey || event.shiftKey;
+    const alreadySelected = selectedIds.has(block.blockId);
     if (!multi) {
-      selected = [block];
+      selected = alreadySelected ? [] : [block];
       return;
     }
-    selected = selectedIds.has(block.blockId)
+    selected = alreadySelected
       ? selected.filter((item) => item.blockId !== block.blockId)
       : [...selected, block];
   }
@@ -124,29 +125,23 @@
       product: data.product,
       documentId: "pi-notes-brain",
       comments,
-      globalInstruction: "Use this feedback to shape pi-notes itself. Browser delivered the batch to Pi; the Document Host keeps a local receipt only.",
+      globalInstruction: "Use this feedback to shape pi-notes itself. The Document Host saved the Review Batch and forwarded it to the active Pi bridge when connected.",
       expectedAgentAction: "Handle the review feedback, update pi-notes docs or code, write the required Review Receipt, and report handled/partial/unhandled comment ids.",
     };
     sending = true;
     receipt = `Sending feedback ${batchId}...`;
     try {
-      const bridgeUrl = sessionState.session?.reviewBatchesUrl ?? sessionState.bridge?.reviewBatchesUrl;
-      if (!bridgeUrl) throw new Error("missing active Pi bridge reviewBatchesUrl");
-      const bridgeResponse = await fetch(bridgeUrl, {
+      const response = await fetch("/api/review-batches", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(batch),
       });
-      const bridgeResult = await bridgeResponse.json().catch(() => ({}));
-      if (!bridgeResponse.ok || !bridgeResult.ok) throw new Error(bridgeResult.error ?? "bridge delivery failed");
-
-      const receiptResponse = await fetch("/api/review-batches", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...batch, deliveredViaBridge: true }),
-      });
-      const receiptResult = await receiptResponse.json().catch(() => ({}));
-      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${bridgeResult.batchId ?? batchId}${receiptResult.savedPath ? ` · saved ${receiptResult.savedPath}` : ""}`;
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        receipt = `Saved locally but not delivered to Pi · ${result.savedPath ?? batchId} · ${result.error ?? result.status ?? "bridge unavailable"}`;
+        return;
+      }
+      receipt = `Sent ${comments.length} feedback item(s) to Pi · ${result.batchId ?? batchId}${result.savedPath ? ` · saved ${result.savedPath}` : ""}`;
       queue = [];
       comment = "";
       selected = [];
@@ -334,10 +329,10 @@
   .entry-card strong { font-size: 15px; letter-spacing: -0.01em; }
   .entry-card span { color: #6b7280; font-size: 12px; }
   .block { width: 100%; display: block; position: relative; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 2px 5px; color: inherit; cursor: pointer; white-space: pre-wrap; line-height: 1.38; }
-  .block:hover { border-color: #d9d9d6; background: #fafafa; }
+  .block:focus-visible { outline: 2px solid #94a3b8; outline-offset: 2px; }
   .block.selected { border-color: #2563eb; background: #eff6ff; }
   .block .comment { opacity: 0; position: absolute; right: 6px; top: 6px; display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: #4b5563; background: #fff; border: 1px solid #dedede; border-radius: 999px; padding: 2px 6px; }
-  .block:hover .comment, .block.selected .comment { opacity: 1; }
+  .block:focus-visible .comment, .block.selected .comment { opacity: 1; }
   .block-copy { display: block; }
   .block-copy :global(p) { margin: 0; }
   .block-copy :global(h1), .block-copy :global(h2), .block-copy :global(h3) { margin: 0; letter-spacing: -0.015em; line-height: 1.2; }

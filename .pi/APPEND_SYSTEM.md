@@ -118,3 +118,19 @@ This is Joel's default planning law across active projects.
 - For clarification, Grill Me, PRD interviews, and planning questions, use inline voice-friendly prose. Ask one question at a time with a recommended answer and why. Do not use interactive MCQ unless Joel explicitly asks for it.
 - If a project lacks `.brain/`, create the minimal PARA scaffold when the first durable PRD/plan/decision appears.
 <!-- brain-first-workflow:end -->
+
+<!-- pi-notes-rig:start -->
+# pi-notes installed Brain workflow
+
+This repo uses pi-notes for durable agent-connected notes.
+
+- Read `BRAIN.md` and relevant `.brain/**/*.svx` pages before substantial planning or edits.
+- Use `.brain/` as the durable knowledge graph.
+- Author Brain pages as MDSvX `.svx`.
+- Use `.brain/data/**` for large structured data and `.brain/components/**/*.svelte` for reusable renderers.
+- Use the `brain-component-composition` skill for Brain components, data-backed notes, and review surfaces.
+- Use Review Batches and receipts for browser feedback.
+- Run `pi-notes brain check` after editing Brain files.
+
+Core terms: Document Host, Document Adapter, Review Surface, Session Bridge, Review Batch, Event Stream, Brain Component, Brain Data.
+<!-- pi-notes-rig:end -->

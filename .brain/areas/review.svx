@@ -50,3 +50,7 @@ These concepts should become types, services, machines, or docs as the build pro
 14. `SupportPageAdapter` — AI Hero support queue/review pack implementation on top of pi-notes.
 15. `FeedbackAdapter` — pi-feedback integration that renders assistant output in the shared review surface.
 16. `GraphEnginePrototype` — next explicit dogfood prototype for nodes, block refs, edge types, backlinks, review queues, and session feedback state.
+17. `BrainComponentLibrary` — shadcn-like standard Svelte components for MDSvX notes, diagrams, receipts, source references, graph links, and data-backed review surfaces.
+18. `TemplateRegistry` — versioned default Brain/template scaffold that installed projects can diff and update without overwriting project-owned notes or components.
+19. `DiagramAdapter` — common contract for Mermaid, D2, Excalidraw artifacts, and the pi-notes DAG DSL: source extraction, hash, cached render, provenance, and light/dark display.
+20. `HarnessInstructionPack` — shared instruction source that emits Pi, Claude, Codex, AGENTS, and skill guidance so installed pi-notes projects do not drift across harnesses.
