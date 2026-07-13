@@ -647,6 +647,8 @@ export default function piNotes(pi: ExtensionAPI) {
     documentHost = undefined;
   };
 
+  process.once("exit", stopDocumentHost);
+
   const connectCurrentSession = async (ctx: Parameters<Parameters<typeof pi.on>[1]>[1], route = "/notes") => {
     mkdirSync(bridgeDir(), { recursive: true });
     activeRoute = route;
