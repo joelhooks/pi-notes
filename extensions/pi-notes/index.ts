@@ -238,7 +238,7 @@ function bridgeUrl(path = "") {
 }
 
 async function findFreePort(start: number) {
-  for (let port = start; port < start + 100; port += 1) {
+  for (let port = start; port < start + 1_000; port += 1) {
     const available = await new Promise<boolean>((resolve) => {
       const server = createServer();
       server.once("error", () => resolve(false));
@@ -636,7 +636,14 @@ export default function piNotes(pi: ExtensionAPI) {
   };
 
   const stopDocumentHost = () => {
-    documentHost?.kill();
+    const pid = documentHost?.pid;
+    if (pid) {
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch {
+        documentHost?.kill("SIGTERM");
+      }
+    }
     documentHost = undefined;
   };
 
@@ -812,5 +819,6 @@ export default function piNotes(pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     stopWatch();
     stopBridgeServer();
+    stopDocumentHost();
   });
 }
