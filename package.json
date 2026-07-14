@@ -60,7 +60,7 @@
     "diagram:compile": "bun bin/pi-notes.ts diagram compile",
     "mermaid:render": "bun bin/pi-notes.ts mermaid render",
     "mermaid:clean": "bun bin/pi-notes.ts mermaid clean",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests --exclude '.agent-sources/**' --exclude 'repos/**'"
   },
   "pi": {
     "extensions": [
@@ -74,6 +74,7 @@
     "@hugeicons/core-free-icons": "^4.1.4",
     "@hugeicons/svelte": "^1.1.2",
     "@libsql/client": "^0.17.3",
+    "@mux/mux-player": "^3.13.0",
     "@sveltejs/adapter-node": "latest",
     "@sveltejs/kit": "latest",
     "@sveltejs/vite-plugin-svelte": "latest",

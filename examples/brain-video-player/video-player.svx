@@ -1,0 +1,9 @@
+---
+title: "Brain video player"
+---
+
+# Brain video player
+
+`VideoPlayer` defaults to the Mux adapter and derives its poster and storyboard from the public playback ID.
+
+<VideoPlayer playbackId="j53DPGudGinE6O88LHEgtd1MSl003kLS300X8Gl5jfHnM" title="first light" />

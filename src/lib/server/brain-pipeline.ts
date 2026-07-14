@@ -12,11 +12,13 @@ export const defaultBrainComponentImports: Record<string, string> = {
   ExternalLink: "$lib/brain-components/ExternalLink.svelte",
   FeedbackControls: "$lib/brain-components/FeedbackControls.svelte",
   GateTrace: "$lib/brain-components/GateTrace.svelte",
+  MuxPlayer: "$lib/brain-components/MuxPlayer.svelte",
   NoteCallout: "$lib/brain-components/NoteCallout.svelte",
   ReviewReceipt: "$lib/brain-components/ReviewReceipt.svelte",
   SourceReference: "$lib/brain-components/SourceReference.svelte",
   StatusPill: "$lib/brain-components/StatusPill.svelte",
   SupportReplyCard: "$lib/brain-components/SupportReplyCard.svelte",
+  VideoPlayer: "$lib/brain-components/VideoPlayer.svelte",
 };
 
 export function workspaceRoot() {
