@@ -626,7 +626,7 @@ export default function piNotes(pi: ExtensionAPI) {
     documentHost = spawn("bun", ["run", "dev"], {
       cwd: packageRoot,
       detached: true,
-      env: { ...process.env, PI_NOTES_PORT: String(documentHostPort), PI_NOTES_WORKSPACE_ROOT: process.cwd(), VITE_PI_NOTES_WORKSPACE_ROOT: process.cwd() },
+      env: { ...process.env, PI_NOTES_PORT: String(documentHostPort), PI_NOTES_WORKSPACE_ROOT: process.cwd(), VITE_PI_NOTES_WORKSPACE_ROOT: process.cwd(), PI_NOTES_SUPERVISOR_PID: String(process.pid) },
       stdio: ["ignore", logFd, logFd],
     });
     if (documentHost.pid) writeFileSync(documentHostPidPath(), `${documentHost.pid}\n`, "utf8");
