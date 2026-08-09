@@ -1,6 +1,7 @@
 ---
 name: excalidraw-dag
 description: Create very clean, legible Excalidraw DAG/system diagrams for pi-notes. Use for architecture diagrams, feedback loops, data/control flow, state/lifecycle maps, or any request for a simple Excalidraw diagram where readability matters.
+disable-model-invocation: true
 ---
 
 # Excalidraw DAG
