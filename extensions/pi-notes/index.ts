@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
+import { findFreePort } from "./free-port";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -237,17 +238,6 @@ function bridgeUrl(path = "") {
   return `http://127.0.0.1:${bridgePort}${path}`;
 }
 
-async function findFreePort(start: number) {
-  for (let port = start; port < start + 1_000; port += 1) {
-    const available = await new Promise<boolean>((resolve) => {
-      const server = createServer();
-      server.once("error", () => resolve(false));
-      server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
-    });
-    if (available) return port;
-  }
-  throw new Error(`No free port found from ${start}`);
-}
 
 function readJsonFile<T>(path: string): T | undefined {
   try {

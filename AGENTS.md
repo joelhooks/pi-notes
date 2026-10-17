@@ -51,6 +51,7 @@ This repo uses a `.brain/` knowledge graph modeled after `/Users/joel/Code/badas
 - Package manifest must expose resources with the `pi` key in `package.json`.
 - For custom tools that mutate files, use Pi's file mutation queue helpers.
 - Do not create background servers without lifecycle cleanup on `session_shutdown`.
+- Start Pi agents inside this checkout with `pi -ne` plus explicit extensions: `.pi/extensions/pi-notes` duplicates an installed pi-notes package's tools and fails the load.
 
 ## Validation
 
