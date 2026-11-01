@@ -1,0 +1,29 @@
+---
+status: open
+---
+
+# Bug: one Document Host per Pi session
+
+## What we saw
+
+On a busy machine running about 60 Pi sessions, there were about 60 Document Host processes: one `bun run dev` → `vite dev --host 127.0.0.1` per session. Ages ranged from minutes to 9 days. Together they used about 25 GB, counting compressed memory.
+
+None were orphans. Each had a live Pi parent, so the self-reap on supervisor exit works. The cost comes from the design.
+
+## Why
+
+`ensureDocumentHost()` in `extensions/pi-notes/index.ts` reuses a running host only when `/api/session` reports the same `cwd` as the calling Pi.
+
+The host is started with `PI_NOTES_WORKSPACE_ROOT` and `PI_NOTES_SUPERVISOR_PID` pinned to that one session. So every session with a different working directory, or whose host is on another port, starts its own Vite dev server on a fresh port.
+
+## Wanted
+
+- **One shared Document Host per machine and user.** Later sessions discover it, for example through a lock or port file under the bridge dir, and reuse it.
+- **Workspace and session chosen per request or route,** instead of an env var at spawn time.
+- **Lifetime tied to "any connected session"** rather than one supervisor PID. For example, refcount the bridge registrations and exit after an idle grace period with none.
+- **Optional:** a production build instead of `vite dev` for the long-lived host, which is much lighter than a dev server with HMR and watchers.
+
+## Acceptance
+
+- Opening Brain pages from N sessions in M different repos leaves exactly one host process.
+- Closing all sessions stops it after the grace period.
